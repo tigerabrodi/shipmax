@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Background */
+  --color-bg: #040710;
+  --color-bg-surface: rgba(59, 130, 246, 0.02);
+  --color-bg-surface-hover: rgba(59, 130, 246, 0.04);
+  --color-bg-panel: rgba(59, 130, 246, 0.03);
+  --color-bg-panel-hover: rgba(59, 130, 246, 0.06);
+  --color-bg-button: rgba(59, 130, 246, 0.06);
+
+  /* Borders */
+  --color-border: rgba(59, 130, 246, 0.2);
+  --color-border-subtle: rgba(59, 130, 246, 0.12);
+  --color-border-dim: rgba(59, 130, 246, 0.08);
+  --color-border-bright: rgba(96, 165, 250, 0.4);
+
+  /* Primary blues */
+  --color-blue: #3b82f6;
+  --color-blue-light: #60a5fa;
+  --color-blue-lighter: #93c5fd;
+  --color-blue-lightest: #bfdbfe;
+  --color-blue-text: #dbeafe;
+
+  /* Text */
+  --color-text-primary: #dbeafe;
+  --color-text-secondary: rgba(219, 234, 254, 0.5);
+  --color-text-dim: rgba(96, 165, 250, 0.5);
+  --color-text-muted: rgba(96, 165, 250, 0.35);
+  --color-text-ghost: rgba(148, 163, 184, 0.3);
+
+  /* Rank colors */
+  --color-rank-s: #fbbf24;
+  --color-rank-a: #a78bfa;
+  --color-rank-b: #3b82f6;
+  --color-rank-c: #22c55e;
+  --color-rank-d: #6b7280;
+  --color-rank-e: #ef4444;
+
+  /* Rank glows (for borders/shadows) */
+  --color-rank-s-glow: rgba(251, 191, 36, 0.5);
+  --color-rank-a-glow: rgba(167, 139, 250, 0.5);
+  --color-rank-b-glow: rgba(59, 130, 246, 0.5);
+  --color-rank-c-glow: rgba(34, 197, 94, 0.5);
+  --color-rank-d-glow: rgba(107, 114, 128, 0.3);
+  --color-rank-e-glow: rgba(239, 68, 68, 0.5);
+
+  /* Error */
+  --color-error: rgba(239, 68, 68, 0.7);
+  --color-error-border: rgba(239, 68, 68, 0.3);
+  --color-error-bg: rgba(239, 68, 68, 0.03);
+
+  /* Typography */
+  --font-display: 'Cinzel Decorative', serif;
+  --font-body: 'Chakra Petch', sans-serif;
+
+  --text-display: 56px;
+  --text-display-mobile: 36px;
+  --text-heading: 32px;
+  --text-heading-mobile: 20px;
+  --text-title: 22px;
+  --text-body: 15px;
+  --text-small: 13px;
+  --text-caption: 12px;
+  --text-label: 11px;
+  --text-micro: 9px;
+
+  /* Spacing */
+  --spacing-section: 48px;
+  --spacing-group: 24px;
+  --spacing-element: 16px;
+  --spacing-tight: 8px;
+  --spacing-micro: 4px;
+
+  /* Radii — mostly 0 for squarish HUD feel */
+  --radius-sm: 2px;
+
+  /* Shadows / Glows */
+  --shadow-glow-sm: 0 0 12px rgba(59, 130, 246, 0.1);
+  --shadow-glow-md: 0 0 20px rgba(59, 130, 246, 0.15);
+  --shadow-glow-lg: 0 0 30px rgba(59, 130, 246, 0.2);
+  --shadow-glow-button: 0 0 20px rgba(59, 130, 246, 0.15);
+  --shadow-glow-rank-s: 0 0 24px rgba(251, 191, 36, 0.15);
+}
+
+/* Base styles */
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sonner toast overrides */
+[data-sonner-toaster] [data-sonner-toast] [data-content] {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  --toast-animation-duration: 200ms;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease,
+    height 200ms ease,
+    box-shadow 200ms ease !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type='loading'] {
+  border-left: 3px solid var(--color-blue);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type='loading'] [data-icon] {
+  color: var(--color-blue);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-type='loading'] .sonner-loader {
+  position: static;
+  transform: none;
+}
