@@ -1,0 +1,34 @@
+/* Contribution cell hover state */
+.contribution-cell:hover {
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  margin: -1px;
+}
+
+/* Tooltip on hover */
+.contribution-cell {
+  position: relative;
+}
+
+.contribution-cell::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #dbeafe;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 100ms ease;
+  z-index: 10;
+}
+
+.contribution-cell:hover::before {
+  opacity: 1;
+}

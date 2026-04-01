@@ -13,6 +13,7 @@ import { Route as LeaderboardRouteRouteImport } from './routes/leaderboard/route
 import { Route as FormulaRouteRouteImport } from './routes/formula/route'
 import { Route as IndexRouteRouteImport } from './routes/index/route'
 import { Route as UUsernameRouteRouteImport } from './routes/u/$username/route'
+import { Route as AdminComponentsRouteRouteImport } from './routes/admin/components/route'
 
 const LeaderboardRouteRoute = LeaderboardRouteRouteImport.update({
   id: '/leaderboard',
@@ -34,17 +35,24 @@ const UUsernameRouteRoute = UUsernameRouteRouteImport.update({
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminComponentsRouteRoute = AdminComponentsRouteRouteImport.update({
+  id: '/admin/components',
+  path: '/admin/components',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRouteRoute
   '/formula': typeof FormulaRouteRoute
   '/leaderboard': typeof LeaderboardRouteRoute
+  '/admin/components': typeof AdminComponentsRouteRoute
   '/u/$username': typeof UUsernameRouteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRouteRoute
   '/formula': typeof FormulaRouteRoute
   '/leaderboard': typeof LeaderboardRouteRoute
+  '/admin/components': typeof AdminComponentsRouteRoute
   '/u/$username': typeof UUsernameRouteRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,33 @@ export interface FileRoutesById {
   '/': typeof IndexRouteRoute
   '/formula': typeof FormulaRouteRoute
   '/leaderboard': typeof LeaderboardRouteRoute
+  '/admin/components': typeof AdminComponentsRouteRoute
   '/u/$username': typeof UUsernameRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/formula' | '/leaderboard' | '/u/$username'
+  fullPaths:
+    | '/'
+    | '/formula'
+    | '/leaderboard'
+    | '/admin/components'
+    | '/u/$username'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/formula' | '/leaderboard' | '/u/$username'
-  id: '__root__' | '/' | '/formula' | '/leaderboard' | '/u/$username'
+  to: '/' | '/formula' | '/leaderboard' | '/admin/components' | '/u/$username'
+  id:
+    | '__root__'
+    | '/'
+    | '/formula'
+    | '/leaderboard'
+    | '/admin/components'
+    | '/u/$username'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRouteRoute: typeof IndexRouteRoute
   FormulaRouteRoute: typeof FormulaRouteRoute
   LeaderboardRouteRoute: typeof LeaderboardRouteRoute
+  AdminComponentsRouteRoute: typeof AdminComponentsRouteRoute
   UUsernameRouteRoute: typeof UUsernameRouteRoute
 }
 
@@ -99,6 +120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/components': {
+      id: '/admin/components'
+      path: '/admin/components'
+      fullPath: '/admin/components'
+      preLoaderRoute: typeof AdminComponentsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +134,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRouteRoute: IndexRouteRoute,
   FormulaRouteRoute: FormulaRouteRoute,
   LeaderboardRouteRoute: LeaderboardRouteRoute,
+  AdminComponentsRouteRoute: AdminComponentsRouteRoute,
   UUsernameRouteRoute: UUsernameRouteRoute,
 }
 export const routeTree = rootRouteImport

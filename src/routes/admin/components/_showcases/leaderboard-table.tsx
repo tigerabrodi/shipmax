@@ -1,13 +1,9 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   LeaderboardTable,
   type LeaderboardEntry,
 } from '@/components/leaderboard-table'
 import { type Rank } from '@/components/leaderboard-card'
-
-export const Route = createFileRoute('/leaderboard')({
-  component: LeaderboardPage,
-})
+import { Section } from './section'
 
 const DUMMY_ENTRIES: Array<LeaderboardEntry> = [
   {
@@ -75,35 +71,12 @@ const DUMMY_ENTRIES: Array<LeaderboardEntry> = [
   },
 ]
 
-function LeaderboardPage() {
+function LeaderboardTableShowcase() {
   return (
-    <div className="bg-bg flex min-h-screen flex-col items-center">
-      {/* Header */}
-      <div className="flex flex-col items-center gap-1 pt-9 md:gap-1.5 md:pt-12">
-        <h2 className="font-display text-[16px] leading-5 font-bold tracking-[3px] text-[rgba(219,234,254,0.5)] md:text-[20px] md:leading-6 md:tracking-[4px]">
-          SHIPMAX
-        </h2>
-        <h1 className="font-body text-text-primary text-[20px] leading-6 font-bold tracking-[3px] md:text-[32px] md:leading-10 md:tracking-[4px]">
-          NATIONAL RANKINGS
-        </h1>
-        <p className="mt-0.5 text-[10px] leading-3 font-medium tracking-[2px] text-[rgba(96,165,250,0.3)] md:tracking-[3px]">
-          2,847 HUNTERS RANKED
-        </p>
-      </div>
-
-      {/* Table */}
-      <LeaderboardTable
-        entries={DUMMY_ENTRIES}
-        className="mt-5 px-4 md:mt-8 md:px-0"
-      />
-
-      {/* Back link */}
-      <Link
-        to="/"
-        className="mt-5 text-[12px] leading-4 font-medium text-[rgba(96,165,250,0.4)] transition-colors hover:text-[rgba(96,165,250,0.6)] md:mt-6"
-      >
-        ← Back to home
-      </Link>
-    </div>
+    <Section title="Leaderboard Table">
+      <LeaderboardTable entries={DUMMY_ENTRIES} />
+    </Section>
   )
 }
+
+export { LeaderboardTableShowcase }
