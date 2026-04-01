@@ -50,8 +50,7 @@ export function Toaster() {
           success:
             'border-l-[3px] !border-l-rank-c [&_[data-icon]]:text-rank-c',
           info: 'border-l-[3px] !border-l-blue [&_[data-icon]]:text-blue',
-          error:
-            'border-l-[3px] !border-l-rank-e [&_[data-icon]]:text-rank-e',
+          error: 'border-l-[3px] !border-l-rank-e [&_[data-icon]]:text-rank-e',
         },
       }}
     />

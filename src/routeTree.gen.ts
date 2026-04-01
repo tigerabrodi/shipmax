@@ -9,38 +9,82 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LeaderboardRouteRouteImport } from './routes/leaderboard/route'
+import { Route as FormulaRouteRouteImport } from './routes/formula/route'
 import { Route as IndexRouteRouteImport } from './routes/index/route'
+import { Route as UUsernameRouteRouteImport } from './routes/u/$username/route'
 
+const LeaderboardRouteRoute = LeaderboardRouteRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FormulaRouteRoute = FormulaRouteRouteImport.update({
+  id: '/formula',
+  path: '/formula',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRouteRoute = IndexRouteRouteImport.update({
   id: '/',
   path: '',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UUsernameRouteRoute = UUsernameRouteRouteImport.update({
+  id: '/u/$username',
+  path: '/u/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRouteRoute
+  '/formula': typeof FormulaRouteRoute
+  '/leaderboard': typeof LeaderboardRouteRoute
+  '/u/$username': typeof UUsernameRouteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRouteRoute
+  '/formula': typeof FormulaRouteRoute
+  '/leaderboard': typeof LeaderboardRouteRoute
+  '/u/$username': typeof UUsernameRouteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRouteRoute
+  '/formula': typeof FormulaRouteRoute
+  '/leaderboard': typeof LeaderboardRouteRoute
+  '/u/$username': typeof UUsernameRouteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/formula' | '/leaderboard' | '/u/$username'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/formula' | '/leaderboard' | '/u/$username'
+  id: '__root__' | '/' | '/formula' | '/leaderboard' | '/u/$username'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRouteRoute: typeof IndexRouteRoute
+  FormulaRouteRoute: typeof FormulaRouteRoute
+  LeaderboardRouteRoute: typeof LeaderboardRouteRoute
+  UUsernameRouteRoute: typeof UUsernameRouteRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/leaderboard': {
+      id: '/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/leaderboard'
+      preLoaderRoute: typeof LeaderboardRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/formula': {
+      id: '/formula'
+      path: '/formula'
+      fullPath: '/formula'
+      preLoaderRoute: typeof FormulaRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: ''
@@ -48,11 +92,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/u/$username': {
+      id: '/u/$username'
+      path: '/u/$username'
+      fullPath: '/u/$username'
+      preLoaderRoute: typeof UUsernameRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRouteRoute: IndexRouteRoute,
+  FormulaRouteRoute: FormulaRouteRoute,
+  LeaderboardRouteRoute: LeaderboardRouteRoute,
+  UUsernameRouteRoute: UUsernameRouteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
