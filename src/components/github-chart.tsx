@@ -32,7 +32,6 @@ const LEVEL_BG: Record<ContributionLevel, string> = {
   FOURTH_QUARTILE: 'bg-blue',
 }
 
-const CELL_SIZE = 12
 const CELL_GAP = 2
 
 const SHORT_MONTHS = [
@@ -74,12 +73,12 @@ function GitHubChart({ weeks, className }: GitHubChartProps) {
         Contribution History
       </p>
 
-      <div className="overflow-x-auto">
+      <div>
         <div
-          className="inline-grid"
+          className="grid w-full"
           style={{
-            gridTemplateColumns: `repeat(${weeks.length}, ${CELL_SIZE}px)`,
-            gridTemplateRows: `repeat(7, ${CELL_SIZE}px)`,
+            gridTemplateColumns: `repeat(${weeks.length}, 1fr)`,
+            gridTemplateRows: `repeat(7, auto)`,
             gap: CELL_GAP,
           }}
         >
