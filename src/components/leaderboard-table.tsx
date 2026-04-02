@@ -1,3 +1,5 @@
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { cn } from '@/utils/cn'
 import { type Rank } from './leaderboard-card'
 
@@ -34,6 +36,48 @@ const RANK_RGB: Record<Rank, string> = {
 }
 
 function LeaderboardTable({ entries, className }: LeaderboardTableProps) {
+  const rowsRef = useRef<HTMLDivElement | null>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+
+  useLayoutEffect(() => {
+    function updateScrollMargin() {
+      const rowsElement = rowsRef.current
+
+      if (!rowsElement) {
+        return
+      }
+
+      setScrollMargin(rowsElement.getBoundingClientRect().top + window.scrollY)
+    }
+
+    updateScrollMargin()
+    window.addEventListener('resize', updateScrollMargin)
+
+    return () => {
+      window.removeEventListener('resize', updateScrollMargin)
+    }
+  }, [entries.length])
+
+  const rowVirtualizer = useWindowVirtualizer({
+    count: entries.length,
+    estimateSize: () => 56,
+    overscan: 8,
+    scrollMargin,
+  })
+
+  const virtualRows = rowVirtualizer.getVirtualItems()
+
+  const measureRow = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (!element) {
+        return
+      }
+
+      rowVirtualizer.measureElement(element)
+    },
+    [rowVirtualizer]
+  )
+
   return (
     <div className={cn('flex w-full flex-col md:w-[800px]', className)}>
       {/* Column headers — desktop only */}
@@ -54,72 +98,96 @@ function LeaderboardTable({ entries, className }: LeaderboardTableProps) {
       </div>
 
       {/* Rows */}
-      {entries.map((entry, i) => {
-        const isFirst = entry.position === 1
-        const isLast = i === entries.length - 1
-        const rgb = RANK_RGB[entry.rank]
+      <div ref={rowsRef} className="relative">
+        <div
+          className="relative"
+          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+        >
+          {virtualRows.map((virtualRow) => {
+            const entry = entries[virtualRow.index]
+            const isLast = virtualRow.index === entries.length - 1
 
-        return (
-          <div
-            key={entry.username}
-            className={cn(
-              'flex items-center',
-              'gap-2.5 px-3 py-3 md:gap-0 md:px-5 md:py-3.5',
-              !isLast && 'border-b border-[rgba(59,130,246,0.06)]'
-            )}
-            style={
-              isFirst ? { backgroundColor: `rgba(${rgb}, 0.03)` } : undefined
-            }
-          >
-            {/* Position */}
-            <span
-              className="w-6 shrink-0 text-[13px] leading-4 font-bold md:w-[50px] md:text-[14px] md:leading-[18px]"
-              style={{
-                color: isFirst
-                  ? `rgba(${rgb}, 0.6)`
-                  : 'rgba(148, 163, 184, 0.4)',
-              }}
-            >
-              {entry.position}
-            </span>
+            return (
+              <div
+                key={virtualRow.key}
+                ref={measureRow}
+                className="absolute top-0 left-0 w-full"
+                data-index={virtualRow.index}
+                style={{
+                  transform: `translateY(${virtualRow.start - scrollMargin}px)`,
+                }}
+              >
+                <LeaderboardTableRow entry={entry} isLast={isLast} />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
-            {/* Avatar */}
-            <img
-              src={entry.avatarUrl}
-              alt={entry.username}
-              className="size-6 shrink-0 rounded-full object-cover md:mr-2 md:size-7"
-            />
+function LeaderboardTableRow({
+  entry,
+  isLast,
+}: {
+  entry: LeaderboardEntry
+  isLast: boolean
+}) {
+  const isFirst = entry.position === 1
+  const rgb = RANK_RGB[entry.rank]
 
-            {/* Username */}
-            <span className="text-text-primary min-w-0 flex-1 truncate text-[13px] leading-4 font-semibold md:text-[14px] md:leading-[18px]">
-              {entry.username}
-            </span>
+  return (
+    <div
+      className={cn(
+        'flex items-center',
+        'gap-2.5 px-3 py-3 md:gap-0 md:px-5 md:py-3.5',
+        !isLast && 'border-b border-[rgba(59,130,246,0.06)]'
+      )}
+      style={isFirst ? { backgroundColor: `rgba(${rgb}, 0.03)` } : undefined}
+    >
+      {/* Position */}
+      <span
+        className="w-6 shrink-0 text-[13px] leading-4 font-bold md:w-[50px] md:text-[14px] md:leading-[18px]"
+        style={{
+          color: isFirst ? `rgba(${rgb}, 0.6)` : 'rgba(148, 163, 184, 0.4)',
+        }}
+      >
+        {entry.position}
+      </span>
 
-            {/* Rank */}
-            <span
-              className={cn(
-                'shrink-0 font-bold',
-                'text-[16px] leading-5 md:w-[60px] md:text-center md:text-[18px] md:leading-[22px]',
-                RANK_TEXT[entry.rank]
-              )}
-            >
-              {entry.rank}
-            </span>
+      {/* Avatar */}
+      <img
+        src={entry.avatarUrl}
+        alt={entry.username}
+        className="size-6 shrink-0 rounded-full object-cover md:mr-2 md:size-7"
+      />
 
-            {/* Score */}
-            <span
-              className="w-7 shrink-0 text-right text-[12px] leading-4 font-semibold md:w-[60px] md:text-[14px] md:leading-[18px]"
-              style={{
-                color: isFirst
-                  ? `rgba(${rgb}, 0.6)`
-                  : 'rgba(96, 165, 250, 0.5)',
-              }}
-            >
-              {entry.score}
-            </span>
-          </div>
-        )
-      })}
+      {/* Username */}
+      <span className="text-text-primary min-w-0 flex-1 truncate text-[13px] leading-4 font-semibold md:text-[14px] md:leading-[18px]">
+        {entry.username}
+      </span>
+
+      {/* Rank */}
+      <span
+        className={cn(
+          'shrink-0 font-bold',
+          'text-[16px] leading-5 md:w-[60px] md:text-center md:text-[18px] md:leading-[22px]',
+          RANK_TEXT[entry.rank]
+        )}
+      >
+        {entry.rank}
+      </span>
+
+      {/* Score */}
+      <span
+        className="w-7 shrink-0 text-right text-[12px] leading-4 font-semibold md:w-[60px] md:text-[14px] md:leading-[18px]"
+        style={{
+          color: isFirst ? `rgba(${rgb}, 0.6)` : 'rgba(96, 165, 250, 0.5)',
+        }}
+      >
+        {entry.score}
+      </span>
     </div>
   )
 }

@@ -1,91 +1,36 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import {
-  LeaderboardTable,
-  type LeaderboardEntry,
-} from '@/components/leaderboard-table'
-import { type Rank } from '@/components/leaderboard-card'
+import { useQuery } from 'convex/react'
+import { type ReactNode } from 'react'
+import { RiftLoading } from '@/components/rift-loading'
+import { LeaderboardTable } from '@/components/leaderboard-table'
+import { api } from '@convex/_generated/api'
 import './leaderboard.css'
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,
 })
 
-// TODO: Replace with Convex query — useQuery(api.leaderboard.list)
-const MOCK_ENTRIES: Array<LeaderboardEntry> = [
-  {
-    position: 1,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4',
-    username: 'torvalds',
-    rank: 'S' as Rank,
-    score: 97,
-  },
-  {
-    position: 2,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/170270?v=4',
-    username: 'sindresorhus',
-    rank: 'S' as Rank,
-    score: 92,
-  },
-  {
-    position: 3,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/25254?v=4',
-    username: 'tj',
-    rank: 'S' as Rank,
-    score: 89,
-  },
-  {
-    position: 4,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/810438?v=4',
-    username: 'gaearon',
-    rank: 'A' as Rank,
-    score: 78,
-  },
-  {
-    position: 5,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/124599?v=4',
-    username: 'shadcn',
-    rank: 'A' as Rank,
-    score: 74,
-  },
-  {
-    position: 6,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/45585937?v=4',
-    username: 'tigerabrodi',
-    rank: 'B' as Rank,
-    score: 63,
-  },
-  {
-    position: 7,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4',
-    username: 'devhunter99',
-    rank: 'C' as Rank,
-    score: 48,
-  },
-  {
-    position: 8,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4',
-    username: 'codejunkie',
-    rank: 'D' as Rank,
-    score: 31,
-  },
-  {
-    position: 9,
-    avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4',
-    username: 'newdev2026',
-    rank: 'E' as Rank,
-    score: 12,
-  },
-]
-
-// TODO: Replace with Convex query — useQuery(api.leaderboard.totalCount)
-const MOCK_TOTAL_HUNTERS = '2,847'
-
 function LeaderboardPage() {
-  // TODO: Wire up Convex queries
-  // const entries = useQuery(api.leaderboard.list)
-  // const totalCount = useQuery(api.leaderboard.totalCount)
-  const entries = MOCK_ENTRIES
-  const totalHunters = MOCK_TOTAL_HUNTERS
+  const entries = useQuery(api.leaderboard.queries.list, {})
+  const totalHunters = entries?.length.toLocaleString() ?? '...'
+  let leaderboardContent: ReactNode
+
+  if (entries === undefined) {
+    leaderboardContent = (
+      <div className="mt-8 flex min-h-[320px] w-full items-center justify-center px-4 md:mt-10 md:px-0">
+        <RiftLoading />
+      </div>
+    )
+  } else if (entries.length === 0) {
+    leaderboardContent = <LeaderboardEmptyState />
+  } else {
+    leaderboardContent = (
+      <LeaderboardTable
+        entries={entries}
+        className="mt-5 px-4 md:mt-8 md:px-0"
+      />
+    )
+  }
 
   return (
     <div className="leaderboard-page relative flex min-h-screen flex-col items-center overflow-clip">
@@ -117,12 +62,7 @@ function LeaderboardPage() {
       </div>
 
       {/* Leaderboard table */}
-      {/* TODO: Add loading state (RiftLoading) while entries are undefined */}
-      {/* TODO: Add empty state if no entries returned */}
-      <LeaderboardTable
-        entries={entries}
-        className="mt-5 px-4 md:mt-8 md:px-0"
-      />
+      {leaderboardContent}
 
       {/* Back link */}
       <Link
@@ -131,6 +71,16 @@ function LeaderboardPage() {
       >
         ← Back to home
       </Link>
+    </div>
+  )
+}
+
+function LeaderboardEmptyState() {
+  return (
+    <div className="mt-8 flex w-full justify-center px-4 md:mt-10 md:px-0">
+      <div className="flex min-h-[160px] w-full max-w-[800px] items-center justify-center border border-[#3B82F624] bg-[#08101d99] px-6 text-center text-[12px] leading-[18px] font-medium tracking-[2px] text-[#93C5FD80] md:text-[13px]">
+        NO HUNTERS RANKED YET.
+      </div>
     </div>
   )
 }

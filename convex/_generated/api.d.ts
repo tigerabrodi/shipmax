@@ -8,13 +8,17 @@
  * @module
  */
 
+import type * as leaderboard_queries from "../leaderboard/queries.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  "leaderboard/queries": typeof leaderboard_queries;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
