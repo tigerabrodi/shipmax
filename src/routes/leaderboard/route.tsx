@@ -4,12 +4,14 @@ import {
   type LeaderboardEntry,
 } from '@/components/leaderboard-table'
 import { type Rank } from '@/components/leaderboard-card'
+import './leaderboard.css'
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,
 })
 
-const DUMMY_ENTRIES: Array<LeaderboardEntry> = [
+// TODO: Replace with Convex query — useQuery(api.leaderboard.list)
+const MOCK_ENTRIES: Array<LeaderboardEntry> = [
   {
     position: 1,
     avatarUrl: 'https://avatars.githubusercontent.com/u/1024025?v=4',
@@ -75,32 +77,57 @@ const DUMMY_ENTRIES: Array<LeaderboardEntry> = [
   },
 ]
 
+// TODO: Replace with Convex query — useQuery(api.leaderboard.totalCount)
+const MOCK_TOTAL_HUNTERS = '2,847'
+
 function LeaderboardPage() {
+  // TODO: Wire up Convex queries
+  // const entries = useQuery(api.leaderboard.list)
+  // const totalCount = useQuery(api.leaderboard.totalCount)
+  const entries = MOCK_ENTRIES
+  const totalHunters = MOCK_TOTAL_HUNTERS
+
   return (
-    <div className="bg-bg flex min-h-screen flex-col items-center">
+    <div className="leaderboard-page relative flex min-h-screen flex-col items-center overflow-clip">
+      {/* Decorative border — desktop only */}
+      <div className="pointer-events-none absolute inset-4 hidden border border-[#3B82F61F] md:block" />
+
       {/* Header */}
-      <div className="flex flex-col items-center gap-1 pt-9 md:gap-1.5 md:pt-12">
-        <h2 className="font-display text-[16px] leading-5 font-bold tracking-[3px] text-[rgba(219,234,254,0.5)] md:text-[20px] md:leading-6 md:tracking-[4px]">
+      <div className="relative flex flex-col items-center gap-1 pt-9 md:gap-1.5 md:pt-12">
+        <h2 className="font-display text-[16px] leading-[20px] font-bold tracking-[3px] text-[#DBEAFE80] md:text-[20px] md:leading-[24px] md:tracking-[4px]">
           SHIPMAX
         </h2>
-        <h1 className="font-body text-text-primary text-[20px] leading-6 font-bold tracking-[3px] md:text-[32px] md:leading-10 md:tracking-[4px]">
+        <h1 className="text-[20px] leading-[24px] font-bold tracking-[3px] text-[#DBEAFE] md:text-[32px] md:leading-[40px] md:tracking-[4px]">
           NATIONAL RANKINGS
         </h1>
-        <p className="mt-0.5 text-[10px] leading-3 font-medium tracking-[2px] text-[rgba(96,165,250,0.3)] md:tracking-[3px]">
-          2,847 HUNTERS RANKED
+
+        {/* Desktop: decorative divider with hunter count */}
+        <div className="mt-1 hidden items-center gap-[10px] md:flex">
+          <div className="leaderboard-line-left h-px w-[50px]" />
+          <span className="text-[10px] leading-[12px] font-medium tracking-[3px] text-[#60A5FA4D]">
+            {totalHunters} HUNTERS RANKED
+          </span>
+          <div className="leaderboard-line-right h-px w-[50px]" />
+        </div>
+
+        {/* Mobile: plain hunter count */}
+        <p className="mt-0.5 text-[10px] leading-[12px] font-medium tracking-[2px] text-[#60A5FA4D] md:hidden">
+          {totalHunters} HUNTERS
         </p>
       </div>
 
-      {/* Table */}
+      {/* Leaderboard table */}
+      {/* TODO: Add loading state (RiftLoading) while entries are undefined */}
+      {/* TODO: Add empty state if no entries returned */}
       <LeaderboardTable
-        entries={DUMMY_ENTRIES}
+        entries={entries}
         className="mt-5 px-4 md:mt-8 md:px-0"
       />
 
       {/* Back link */}
       <Link
         to="/"
-        className="mt-5 text-[12px] leading-4 font-medium text-[rgba(96,165,250,0.4)] transition-colors hover:text-[rgba(96,165,250,0.6)] md:mt-6"
+        className="mt-5 pb-12 text-[12px] leading-[16px] font-medium text-[#60A5FA66] md:mt-6 md:pb-16"
       >
         ← Back to home
       </Link>

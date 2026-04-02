@@ -4,7 +4,7 @@ import { RiftLoading } from '@/components/rift-loading'
 import { Section } from './section'
 
 function RiftLoadingShowcase() {
-  const [visible, setVisible] = useState(false)
+  const [isVisible, setVisible] = useState(false)
 
   return (
     <Section title="Rift Loading (Fullscreen)">
@@ -12,7 +12,7 @@ function RiftLoadingShowcase() {
         SHOW RIFT LOADING
       </Button>
 
-      {visible && (
+      {isVisible && (
         <div onClick={() => setVisible(false)} className="cursor-pointer">
           <RiftLoading />
         </div>
