@@ -20,11 +20,21 @@ export const list = query({
   },
   returns: paginationResultValidator(leaderboardUserValidator),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const results = await ctx.db
       .query('users')
       .withIndex('by_score')
       .order('desc')
       .paginate(args.paginationOpts)
+
+    return {
+      ...results,
+      page: results.page.map((user) => ({
+        avatarUrl: user.avatarUrl,
+        username: user.username,
+        rank: user.rank,
+        score: user.score,
+      })),
+    }
   },
 })
 
