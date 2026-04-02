@@ -235,7 +235,7 @@ function ProfilePage() {
   const { profile } = profileState
 
   return (
-    <div className="bg-bg relative flex min-h-svh flex-col items-center overflow-hidden pb-12">
+    <div className="bg-bg relative flex min-h-svh flex-col items-center overflow-hidden pb-12 md:pb-6">
       <div className="pointer-events-none absolute inset-4 hidden border border-[#3B82F61F] md:block" />
 
       <div ref={profileCardRef} className="flex w-full flex-col items-center pb-2">
@@ -250,18 +250,18 @@ function ProfilePage() {
           roast={profile.roast}
         />
 
-        <div className="mt-4 w-full md:mt-8 md:w-auto">
+        <div className="mt-4 w-full md:mt-4 md:w-auto">
           <ProfileStatBars stats={profile.stats} />
         </div>
 
         <div className="mt-6 hidden md:block">
           <GitHubChart
             weeks={profile.rawData.contributionCalendar}
-            className="w-[740px]"
+            className="w-[620px]"
           />
         </div>
 
-        <div className="mt-0 w-full md:mt-6 md:w-auto">
+        <div className="mt-0 w-full md:mt-4 md:w-auto">
           <ProfileFunStats
             rank={profile.rank}
             streak={profile.rawData.currentStreak}

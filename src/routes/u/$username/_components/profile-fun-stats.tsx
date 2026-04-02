@@ -41,15 +41,15 @@ function ProfileFunStats({
           className={
             // Mobile: first 3 in a row, last 2 in a row. Desktop: all in one row.
             i < 3
-              ? 'flex w-[calc(33.33%-2px)] flex-col items-center gap-0.5 border border-[#3B82F61F] bg-[#3B82F608] px-1 py-3 md:w-auto md:gap-1 md:px-7 md:py-4'
-              : 'flex w-[calc(50%-1px)] flex-col items-center gap-0.5 border border-[#3B82F61F] bg-[#3B82F608] px-1 py-3 md:w-auto md:gap-1 md:px-7 md:py-4'
+              ? 'flex w-[calc(33.33%-2px)] flex-col items-center gap-0.5 border border-[#3B82F61F] bg-[#3B82F608] px-1 py-3 md:w-auto md:gap-0.5 md:px-5 md:py-2.5'
+              : 'flex w-[calc(50%-1px)] flex-col items-center gap-0.5 border border-[#3B82F61F] bg-[#3B82F608] px-1 py-3 md:w-auto md:gap-0.5 md:px-5 md:py-2.5'
           }
         >
           <span className="md:text-micro text-[8px] leading-[10px] font-semibold tracking-[1px] text-[#60A5FA66] uppercase md:leading-3 md:tracking-[2px]">
             {item.label}
           </span>
           <span
-            className="text-[20px] leading-6 font-bold md:text-[24px] md:leading-[30px]"
+            className="text-[20px] leading-6 font-bold md:text-[20px] md:leading-6"
             style={{ color: `rgb(${rgb})` }}
           >
             {item.value}
