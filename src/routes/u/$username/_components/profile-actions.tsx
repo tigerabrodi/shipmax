@@ -2,7 +2,17 @@ import { Link } from '@tanstack/react-router'
 import { Button } from '@/components/button'
 import { XIcon } from '@/components/icons/x-icon'
 
-function ProfileActions() {
+type ProfileActionsProps = {
+  isDownloading: boolean
+  onDownload: () => void
+  onShare: () => void
+}
+
+function ProfileActions({
+  isDownloading,
+  onDownload,
+  onShare,
+}: ProfileActionsProps) {
   return (
     <div className="flex w-full flex-col items-center px-5 pt-6 md:px-0 md:pt-7">
       {/* Share buttons — stacked on mobile, side by side on desktop */}
@@ -11,18 +21,17 @@ function ProfileActions() {
           variant="secondary"
           icon={<XIcon />}
           className="w-full md:w-auto"
-          // TODO: wire up share to X with pre-filled tweet text + profile URL
-          onClick={() => {}}
+          onClick={onShare}
         >
           SHARE ON X
         </Button>
         <Button
           variant="ghost"
           className="w-full md:w-auto"
-          // TODO: implement html2canvas screenshot + download as PNG
-          onClick={() => {}}
+          disabled={isDownloading}
+          onClick={onDownload}
         >
-          DOWNLOAD IMAGE
+          {isDownloading ? 'DOWNLOADING...' : 'DOWNLOAD IMAGE'}
         </Button>
       </div>
 
@@ -38,3 +47,4 @@ function ProfileActions() {
 }
 
 export { ProfileActions }
+export type { ProfileActionsProps }

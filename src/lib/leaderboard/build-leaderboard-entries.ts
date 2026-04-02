@@ -1,24 +1,15 @@
-import { rankValidator } from '../../../convex/schema'
-import { type Infer, v } from 'convex/values'
-
-type LeaderboardRank = Infer<typeof rankValidator>
+import { type Rank } from '../../components/leaderboard-card'
 
 type LeaderboardSourceUser = {
   avatarUrl: string
   username: string
-  rank: LeaderboardRank
+  rank: Rank
   score: number
 }
 
-const leaderboardEntryValidator = v.object({
-  position: v.number(),
-  avatarUrl: v.string(),
-  username: v.string(),
-  rank: rankValidator,
-  score: v.number(),
-})
-
-type LeaderboardEntry = Infer<typeof leaderboardEntryValidator>
+type LeaderboardEntry = LeaderboardSourceUser & {
+  position: number
+}
 
 function compareLeaderboardUsers({
   leftUser,
@@ -55,6 +46,5 @@ function buildLeaderboardEntries({
 export {
   buildLeaderboardEntries,
   compareLeaderboardUsers,
-  leaderboardEntryValidator,
 }
-export type { LeaderboardEntry, LeaderboardRank, LeaderboardSourceUser }
+export type { LeaderboardEntry, LeaderboardSourceUser }

@@ -1,21 +1,41 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { usePaginatedQuery, useQuery } from 'convex/react'
 import { type ReactNode } from 'react'
 import { RiftLoading } from '@/components/rift-loading'
 import { LeaderboardTable } from '@/components/leaderboard-table'
 import { api } from '@convex/_generated/api'
+import { cn } from '@/utils/cn'
+import { buildLeaderboardEntries } from '@/lib/leaderboard/build-leaderboard-entries'
 import './leaderboard.css'
 
 export const Route = createFileRoute('/leaderboard')({
   component: LeaderboardPage,
 })
 
-function LeaderboardPage() {
-  const entries = useQuery(api.leaderboard.queries.list, {})
-  const totalHunters = entries?.length.toLocaleString() ?? '...'
-  let leaderboardContent: ReactNode
+const INITIAL_PAGE_SIZE = 25
+const LOAD_MORE_PAGE_SIZE = 25
 
-  if (entries === undefined) {
+function LeaderboardPage() {
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.leaderboard.queries.list,
+    {},
+    { initialNumItems: INITIAL_PAGE_SIZE }
+  )
+  const totalRanked = useQuery(api.leaderboard.queries.totalRanked, {})
+  const entries = buildLeaderboardEntries({ users: results })
+  const totalHunters =
+    totalRanked?.toLocaleString() ??
+    (status === 'LoadingFirstPage' ? '...' : entries.length.toLocaleString())
+  let leaderboardContent: ReactNode
+  const shouldShowLoadMore = entries.length > 0
+  const isLoadMoreDisabled = status !== 'CanLoadMore'
+  const loadMoreLabel = getLoadMoreLabel({ status })
+
+  function handleLoadMore() {
+    loadMore(LOAD_MORE_PAGE_SIZE)
+  }
+
+  if (status === 'LoadingFirstPage') {
     leaderboardContent = (
       <div className="mt-8 flex min-h-[320px] w-full items-center justify-center px-4 md:mt-10 md:px-0">
         <RiftLoading />
@@ -64,6 +84,27 @@ function LeaderboardPage() {
       {/* Leaderboard table */}
       {leaderboardContent}
 
+      {shouldShowLoadMore ? (
+        <div className="mt-6 flex w-full justify-center px-4 md:px-0">
+          <button
+            type="button"
+            onClick={handleLoadMore}
+            disabled={isLoadMoreDisabled}
+            className={cn(
+              'flex min-w-[220px] items-center justify-center border px-6 py-3 text-[12px] leading-4 font-semibold tracking-[2px] text-[#DBEAFECC] uppercase transition-[border-color,background-color,color] duration-150',
+              {
+                'border-[#60A5FA29] bg-[#0B1220CC] text-[#DBEAFECC] hover:border-[#60A5FA52] hover:bg-[#0F1728]':
+                  !isLoadMoreDisabled,
+                'cursor-default border-[#60A5FA14] bg-[#08101D99] text-[#60A5FA66]':
+                  isLoadMoreDisabled,
+              }
+            )}
+          >
+            {loadMoreLabel}
+          </button>
+        </div>
+      ) : null}
+
       {/* Back link */}
       <Link
         to="/"
@@ -73,6 +114,23 @@ function LeaderboardPage() {
       </Link>
     </div>
   )
+}
+
+function getLoadMoreLabel({
+  status,
+}: {
+  status: 'LoadingFirstPage' | 'CanLoadMore' | 'LoadingMore' | 'Exhausted'
+}) {
+  switch (status) {
+    case 'LoadingMore':
+      return 'LOADING MORE'
+    case 'Exhausted':
+      return 'ALL HUNTERS LOADED'
+    case 'CanLoadMore':
+      return 'LOAD MORE'
+    case 'LoadingFirstPage':
+      return 'LOADING'
+  }
 }
 
 function LeaderboardEmptyState() {

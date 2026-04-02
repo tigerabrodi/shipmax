@@ -1,112 +1,273 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { type Rank } from '@/components/leaderboard-card'
-import {
-  GitHubChart,
-  type ContributionWeek,
-  type ContributionLevel,
-} from '@/components/github-chart'
-import { ProfileHero } from './_components/profile-hero'
-import { ProfileStatBars } from './_components/profile-stat-bars'
-import { ProfileFunStats } from './_components/profile-fun-stats'
+import html2canvas from 'html2canvas'
+import { useMutation, useQuery } from 'convex/react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { api } from '@convex/_generated/api'
+import { RiftLoading } from '@/components/rift-loading'
+import { toastConvexError } from '@/lib/convex-error'
 import { ProfileActions } from './_components/profile-actions'
+import { ProfileFunStats } from './_components/profile-fun-stats'
+import { ProfileHero } from './_components/profile-hero'
+import { ProfileStatePanel } from './_components/profile-state-panel'
+import { ProfileStatBars } from './_components/profile-stat-bars'
+import { GitHubChart } from '@/components/github-chart'
 
 export const Route = createFileRoute('/u/$username')({
   component: ProfilePage,
-  // TODO: loader should fetch user data from Convex via `api.users.getByUsername`
-  // If user not found, trigger analysis action and show loading state
 })
 
-// --- Mock data (replace with Convex query results) ---
+function formatLastScanned({
+  timestamp,
+}: {
+  timestamp: number
+}): string {
+  const elapsedMs = Date.now() - timestamp
 
-const MOCK_RANK: Rank = 'S'
-
-const MOCK_STATS = {
-  consistency: 95,
-  recentActivity: 98,
-  volume: 100,
-  stars: 100,
-  community: 88,
-}
-
-function generateMockWeeks(): Array<ContributionWeek> {
-  const weeks: Array<ContributionWeek> = []
-  const start = new Date('2025-04-06')
-  for (let w = 0; w < 52; w++) {
-    const days = []
-    for (let d = 0; d < 7; d++) {
-      const date = new Date(start)
-      date.setDate(start.getDate() + w * 7 + d)
-      const rand = Math.random()
-      let level: ContributionLevel
-      if (rand < 0.25) level = 'NONE'
-      else if (rand < 0.45) level = 'FIRST_QUARTILE'
-      else if (rand < 0.65) level = 'SECOND_QUARTILE'
-      else if (rand < 0.85) level = 'THIRD_QUARTILE'
-      else level = 'FOURTH_QUARTILE'
-      const countMap: Record<ContributionLevel, number> = {
-        NONE: 0,
-        FIRST_QUARTILE: Math.floor(Math.random() * 3) + 1,
-        SECOND_QUARTILE: Math.floor(Math.random() * 5) + 4,
-        THIRD_QUARTILE: Math.floor(Math.random() * 8) + 9,
-        FOURTH_QUARTILE: Math.floor(Math.random() * 12) + 17,
-      }
-      days.push({
-        date: date.toISOString().split('T')[0],
-        count: countMap[level],
-        level,
-        weekday: d,
-      })
-    }
-    weeks.push({ days })
+  if (elapsedMs < 60_000) {
+    return 'Last scanned. Just now'
   }
-  return weeks
+
+  if (elapsedMs < 3_600_000) {
+    return `Last scanned. ${Math.floor(elapsedMs / 60_000)}m ago`
+  }
+
+  if (elapsedMs < 86_400_000) {
+    return `Last scanned. ${Math.floor(elapsedMs / 3_600_000)}h ago`
+  }
+
+  return `Last scanned. ${Math.floor(elapsedMs / 86_400_000)}d ago`
 }
 
-const MOCK_WEEKS = generateMockWeeks()
+function formatCompactNumber({
+  value,
+}: {
+  value: number
+}): string {
+  return new Intl.NumberFormat('en', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
+}
 
-// --- End mock data ---
+function formatMostActiveDay({
+  day,
+}: {
+  day: string
+}): string {
+  return day.slice(0, 3).toUpperCase()
+}
 
 function ProfilePage() {
   const { username } = Route.useParams()
-  // TODO: const user = useQuery(api.users.getByUsername, { username })
-  // TODO: handle loading / not-found states
+  const navigate = useNavigate({ from: '/u/$username' })
+  const profileState = useQuery(api.users.queries.getProfileState, {
+    username,
+  })
+  const requestAnalysis = useMutation(api.users.mutations.requestAnalysis)
+  const analysisRequestRef = useRef<string | null>(null)
+  const profileCardRef = useRef<HTMLDivElement | null>(null)
+  const [requestErrorMessage, setRequestErrorMessage] = useState<string | null>(
+    null
+  )
+  const [isDownloading, setIsDownloading] = useState(false)
+
+  const handleRetry = useCallback(async () => {
+    setRequestErrorMessage(null)
+    analysisRequestRef.current = null
+
+    try {
+      await requestAnalysis({ username })
+    } catch (error) {
+      setRequestErrorMessage(toastConvexError(error))
+    }
+  }, [requestAnalysis, username])
+
+  const handleShare = useCallback(() => {
+    if (!profileState || profileState.status !== 'ready') {
+      return
+    }
+
+    const shareUrl = new URL(
+      `/u/${profileState.profile.username}`,
+      window.location.origin
+    ).toString()
+    const shareText = `I'm a ${profileState.profile.rank} RANK HUNTER on ShipMax. Score: ${profileState.profile.score}/100.`
+    const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+
+    window.open(intentUrl, '_blank', 'noopener,noreferrer')
+  }, [profileState])
+
+  const handleDownload = useCallback(async () => {
+    if (
+      !profileState ||
+      profileState.status !== 'ready' ||
+      !profileCardRef.current
+    ) {
+      return
+    }
+
+    try {
+      setIsDownloading(true)
+
+      const canvas = await html2canvas(profileCardRef.current, {
+        backgroundColor: '#040710',
+        logging: false,
+        scale: 2,
+        useCORS: true,
+      })
+
+      const downloadLink = document.createElement('a')
+      downloadLink.download = `${profileState.profile.username}-shipmax.png`
+      downloadLink.href = canvas.toDataURL('image/png')
+      downloadLink.click()
+      toast.success('Hunter card downloaded.')
+    } catch {
+      toast.error('Download failed. Try again.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }, [profileState])
+
+  useEffect(() => {
+    if (!profileState || profileState.status !== 'should_analyze') {
+      return
+    }
+
+    const requestKey = profileState.username.toLowerCase()
+
+    if (analysisRequestRef.current === requestKey) {
+      return
+    }
+
+    analysisRequestRef.current = requestKey
+    setRequestErrorMessage(null)
+
+    void requestAnalysis({ username: profileState.username }).catch((error) => {
+      analysisRequestRef.current = null
+      setRequestErrorMessage(toastConvexError(error))
+    })
+  }, [profileState, requestAnalysis])
+
+  useEffect(() => {
+    if (!profileState || profileState.status !== 'ready') {
+      return
+    }
+
+    analysisRequestRef.current = null
+
+    if (
+      profileState.profile.username.toLowerCase() === username.toLowerCase() &&
+      profileState.profile.username !== username
+    ) {
+      void navigate({
+        to: '/u/$username',
+        params: { username: profileState.profile.username },
+        replace: true,
+      })
+    }
+  }, [navigate, profileState, username])
+
+  if (!profileState) {
+    return <RiftLoading />
+  }
+
+  if (
+    profileState.status === 'should_analyze' ||
+    profileState.status === 'pending'
+  ) {
+    if (requestErrorMessage && profileState.status === 'should_analyze') {
+      return (
+        <ProfileStatePanel
+          title="RIFT CONNECTION FAILED."
+          description={requestErrorMessage}
+          username={profileState.username}
+          showRetry
+          onRetry={handleRetry}
+        />
+      )
+    }
+
+    return <RiftLoading />
+  }
+
+  if (profileState.status === 'not_found') {
+    return (
+      <ProfileStatePanel
+        title="HUNTER NOT FOUND IN DATABASE."
+        description="We searched GitHub and found no public hunter record for this username."
+        username={profileState.username}
+      />
+    )
+  }
+
+  if (profileState.status === 'error') {
+    return (
+      <ProfileStatePanel
+        title="RIFT CONNECTION FAILED."
+        description={requestErrorMessage ?? profileState.message}
+        username={profileState.username}
+        showRetry
+        onRetry={handleRetry}
+      />
+    )
+  }
+
+  const { profile } = profileState
 
   return (
-    <div className="bg-bg flex min-h-screen flex-col items-center pb-12">
-      <ProfileHero
-        avatarUrl="https://avatars.githubusercontent.com/u/1024025?v=4"
-        username={username}
-        rank={MOCK_RANK}
-        rankTitle="NATIONAL LEVEL HUNTER"
-        score={97}
-        position={4}
-        totalRanked={2847}
-        roast="You mass report people with green GitHub graphs because yours is greener."
+    <div className="bg-bg relative flex min-h-svh flex-col items-center overflow-hidden pb-12">
+      <div className="pointer-events-none absolute inset-4 hidden border border-[#3B82F61F] md:block" />
+
+      <div ref={profileCardRef} className="flex w-full flex-col items-center pb-2">
+        <ProfileHero
+          avatarUrl={profile.avatarUrl}
+          username={profile.username}
+          rank={profile.rank}
+          rankTitle={profile.rankTitle}
+          score={profile.score}
+          position={profile.position}
+          totalRanked={profile.totalRanked}
+          roast={profile.roast}
+        />
+
+        <div className="mt-4 w-full md:mt-8 md:w-auto">
+          <ProfileStatBars stats={profile.stats} />
+        </div>
+
+        <div className="mt-6 hidden md:block">
+          <GitHubChart
+            weeks={profile.rawData.contributionCalendar}
+            className="w-[740px]"
+          />
+        </div>
+
+        <div className="mt-0 w-full md:mt-6 md:w-auto">
+          <ProfileFunStats
+            rank={profile.rank}
+            streak={profile.rawData.currentStreak}
+            bestStreak={profile.rawData.longestStreak}
+            mostActiveDay={formatMostActiveDay({
+              day: profile.rawData.mostActiveDay,
+            })}
+            topLanguage={profile.rawData.topLanguage}
+            totalStars={formatCompactNumber({
+              value: profile.rawData.totalStars,
+            })}
+          />
+        </div>
+      </div>
+
+      <ProfileActions
+        isDownloading={isDownloading}
+        onDownload={handleDownload}
+        onShare={handleShare}
       />
 
-      {/* Stat bars */}
-      <div className="mt-4 w-full md:mt-8 md:w-auto">
-        <ProfileStatBars stats={MOCK_STATS} />
+      <div className="mt-6 flex items-center gap-3 text-[10px] leading-3 font-medium tracking-[3px] text-[rgba(96,165,250,0.35)] uppercase">
+        <div className="bg-blue size-1.5" />
+        <span>{formatLastScanned({ timestamp: profile.lastScannedAt })}</span>
       </div>
-
-      {/* Contribution chart — desktop only */}
-      <div className="mt-6 hidden md:block">
-        <GitHubChart weeks={MOCK_WEEKS} className="w-[740px]" />
-      </div>
-
-      {/* Fun stats */}
-      <div className="mt-0 w-full md:mt-6 md:w-auto">
-        <ProfileFunStats
-          rank={MOCK_RANK}
-          streak={247}
-          bestStreak={365}
-          mostActiveDay="Mon"
-          topLanguage="C"
-          totalStars="178k"
-        />
-      </div>
-
-      <ProfileActions />
     </div>
   )
 }

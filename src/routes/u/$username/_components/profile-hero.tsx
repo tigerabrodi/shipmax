@@ -30,6 +30,7 @@ function ProfileHero({
       <img
         src={avatarUrl}
         alt={username}
+        crossOrigin="anonymous"
         className="size-[72px] shrink-0 rounded-full object-cover md:size-[90px]"
         style={{
           border: `3px solid rgba(${rgb}, 0.5)`,

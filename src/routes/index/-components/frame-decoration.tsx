@@ -15,7 +15,11 @@ function TopOrnament() {
   )
 }
 
-function StatusBar() {
+type StatusBarProps = {
+  totalRanked: number
+}
+
+function StatusBar({ totalRanked }: StatusBarProps) {
   return (
     <div className="pointer-events-none absolute bottom-7 left-10 hidden items-center gap-3 md:flex">
       <div className="bg-blue size-1.5" />
@@ -23,9 +27,8 @@ function StatusBar() {
         SYSTEM.READY
       </span>
       <div className="h-px w-[30px] bg-[rgba(96,165,250,0.15)]" />
-      {/* TODO: Replace with live count from convex query */}
       <span className="text-micro font-medium text-[#60A5FA33]">
-        2,847 RANKED
+        {totalRanked.toLocaleString()} RANKED
       </span>
     </div>
   )
@@ -41,7 +44,11 @@ function BottomRightTicks() {
   )
 }
 
-function FrameDecoration() {
+type FrameDecorationProps = {
+  totalRanked: number
+}
+
+function FrameDecoration({ totalRanked }: FrameDecorationProps) {
   return (
     <>
       {/* Double border frame */}
@@ -49,7 +56,7 @@ function FrameDecoration() {
       <div className="pointer-events-none absolute inset-[22px] hidden border border-[rgba(59,130,246,0.1)] md:block" />
 
       <TopOrnament />
-      <StatusBar />
+      <StatusBar totalRanked={totalRanked} />
       <BottomRightTicks />
     </>
   )

@@ -10,6 +10,12 @@ export const rankValidator = v.union(
   v.literal('E')
 )
 
+export const analysisStatusValidator = v.union(
+  v.literal('pending'),
+  v.literal('not_found'),
+  v.literal('error')
+)
+
 export const statsValidator = v.object({
   consistency: v.number(),
   recentActivity: v.number(),
@@ -53,6 +59,7 @@ export const rawDataValidator = v.object({
 export default defineSchema({
   users: defineTable({
     username: v.string(),
+    usernameLower: v.string(),
     avatarUrl: v.string(),
     rank: rankValidator,
     rankTitle: v.string(),
@@ -63,5 +70,19 @@ export default defineSchema({
     analyzedAt: v.number(),
   })
     .index('by_username', ['username'])
-    .index('by_score', ['score']),
+    .index('by_username_lower', ['usernameLower'])
+    .index('by_score', ['score'])
+    .index('by_analyzed_at', ['analyzedAt']),
+  analysisStatuses: defineTable({
+    username: v.string(),
+    usernameLower: v.string(),
+    status: analysisStatusValidator,
+    message: v.string(),
+    updatedAt: v.number(),
+  }).index('by_username_lower', ['usernameLower']),
+  appStats: defineTable({
+    name: v.string(),
+    totalRanked: v.number(),
+    scoreCounts: v.record(v.string(), v.number()),
+  }).index('by_name', ['name']),
 })

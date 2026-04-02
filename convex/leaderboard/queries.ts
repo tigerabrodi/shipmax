@@ -1,25 +1,42 @@
-import { buildLeaderboardEntries } from '../../src/lib/leaderboard/build-leaderboard-entries'
-import { query } from '../_generated/server'
+import {
+  paginationOptsValidator,
+  paginationResultValidator,
+} from 'convex/server'
 import { v } from 'convex/values'
-import { leaderboardEntryValidator } from '../../src/lib/leaderboard/build-leaderboard-entries'
+import { query } from '../_generated/server'
+import { rankValidator } from '../schema'
+import { APP_STATS_NAME } from '../users/shared'
+
+const leaderboardUserValidator = v.object({
+  avatarUrl: v.string(),
+  username: v.string(),
+  rank: rankValidator,
+  score: v.number(),
+})
 
 export const list = query({
-  args: {},
-  returns: v.array(leaderboardEntryValidator),
-  handler: async (ctx) => {
-    const users = await ctx.db
+  args: {
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(leaderboardUserValidator),
+  handler: async (ctx, args) => {
+    return await ctx.db
       .query('users')
       .withIndex('by_score')
       .order('desc')
-      .collect()
+      .paginate(args.paginationOpts)
+  },
+})
 
-    return buildLeaderboardEntries({
-      users: users.map(({ avatarUrl, username, rank, score }) => ({
-        avatarUrl,
-        username,
-        rank,
-        score,
-      })),
-    })
+export const totalRanked = query({
+  args: {},
+  returns: v.number(),
+  handler: async (ctx) => {
+    const appStats = await ctx.db
+      .query('appStats')
+      .withIndex('by_name', (query) => query.eq('name', APP_STATS_NAME))
+      .unique()
+
+    return appStats?.totalRanked ?? 0
   },
 })

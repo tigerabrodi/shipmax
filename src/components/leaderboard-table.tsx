@@ -1,5 +1,3 @@
-import { useWindowVirtualizer } from '@tanstack/react-virtual'
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { cn } from '@/utils/cn'
 import { type Rank } from './leaderboard-card'
 
@@ -36,48 +34,6 @@ const RANK_RGB: Record<Rank, string> = {
 }
 
 function LeaderboardTable({ entries, className }: LeaderboardTableProps) {
-  const rowsRef = useRef<HTMLDivElement | null>(null)
-  const [scrollMargin, setScrollMargin] = useState(0)
-
-  useLayoutEffect(() => {
-    function updateScrollMargin() {
-      const rowsElement = rowsRef.current
-
-      if (!rowsElement) {
-        return
-      }
-
-      setScrollMargin(rowsElement.getBoundingClientRect().top + window.scrollY)
-    }
-
-    updateScrollMargin()
-    window.addEventListener('resize', updateScrollMargin)
-
-    return () => {
-      window.removeEventListener('resize', updateScrollMargin)
-    }
-  }, [entries.length])
-
-  const rowVirtualizer = useWindowVirtualizer({
-    count: entries.length,
-    estimateSize: () => 56,
-    overscan: 8,
-    scrollMargin,
-  })
-
-  const virtualRows = rowVirtualizer.getVirtualItems()
-
-  const measureRow = useCallback(
-    (element: HTMLDivElement | null) => {
-      if (!element) {
-        return
-      }
-
-      rowVirtualizer.measureElement(element)
-    },
-    [rowVirtualizer]
-  )
-
   return (
     <div className={cn('flex w-full flex-col md:w-[800px]', className)}>
       {/* Column headers — desktop only */}
@@ -98,31 +54,13 @@ function LeaderboardTable({ entries, className }: LeaderboardTableProps) {
       </div>
 
       {/* Rows */}
-      <div ref={rowsRef} className="relative">
-        <div
-          className="relative"
-          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
-        >
-          {virtualRows.map((virtualRow) => {
-            const entry = entries[virtualRow.index]
-            const isLast = virtualRow.index === entries.length - 1
-
-            return (
-              <div
-                key={virtualRow.key}
-                ref={measureRow}
-                className="absolute top-0 left-0 w-full"
-                data-index={virtualRow.index}
-                style={{
-                  transform: `translateY(${virtualRow.start - scrollMargin}px)`,
-                }}
-              >
-                <LeaderboardTableRow entry={entry} isLast={isLast} />
-              </div>
-            )
-          })}
-        </div>
-      </div>
+      {entries.map((entry, index) => (
+        <LeaderboardTableRow
+          key={entry.username}
+          entry={entry}
+          isLast={index === entries.length - 1}
+        />
+      ))}
     </div>
   )
 }
