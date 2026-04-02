@@ -99,10 +99,20 @@ export const requestAnalysis = mutation({
       username: args.username,
     })
 
+    console.log('[shipmax]', 'request_analysis_start', {
+      normalizedUsername,
+      requestedUsername: args.username,
+    })
+
     if (
       !normalizedUsername ||
       !isValidGitHubUsername({ username: normalizedUsername })
     ) {
+      console.error('[shipmax]', 'request_analysis_invalid_username', {
+        normalizedUsername,
+        requestedUsername: args.username,
+      })
+
       appError({
         code: 'INVALID_GITHUB_USERNAME',
         message: 'Enter a valid GitHub username.',
@@ -130,6 +140,11 @@ export const requestAnalysis = mutation({
       existingUser &&
       isFreshAnalysis({ analyzedAt: existingUser.analyzedAt, now })
     ) {
+      console.log('[shipmax]', 'request_analysis_cache_hit', {
+        analyzedAt: existingUser.analyzedAt,
+        normalizedUsername,
+      })
+
       if (existingStatus) {
         await ctx.db.delete(existingStatus._id)
       }
@@ -138,6 +153,10 @@ export const requestAnalysis = mutation({
     }
 
     if (existingStatus?.status === 'pending') {
+      console.log('[shipmax]', 'request_analysis_already_pending', {
+        normalizedUsername,
+      })
+
       return { queued: false }
     }
 
@@ -155,6 +174,12 @@ export const requestAnalysis = mutation({
       await ctx.db.insert('analysisStatuses', statusPayload)
     }
 
+    console.log('[shipmax]', 'request_analysis_scheduled', {
+      hadExistingStatus: Boolean(existingStatus),
+      hadExistingUser: Boolean(existingUser),
+      normalizedUsername,
+    })
+
     await ctx.scheduler.runAfter(0, internal.users.actions.analyzeUser, {
       username: normalizedUsername,
     })
@@ -169,6 +194,12 @@ export const saveAnalysisResult = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    console.log('[shipmax]', 'save_analysis_result_start', {
+      normalizedUsername: args.result.usernameLower,
+      score: args.result.score,
+      username: args.result.username,
+    })
+
     const existingUser = await ctx.db
       .query('users')
       .withIndex('by_username_lower', (query) =>
@@ -230,6 +261,15 @@ export const saveAnalysisResult = internalMutation({
       await ctx.db.delete(existingStatus._id)
     }
 
+    console.log('[shipmax]', 'save_analysis_result_complete', {
+      normalizedUsername: args.result.usernameLower,
+      score: args.result.score,
+      totalRanked: existingUser
+        ? appStats.totalRanked
+        : appStats.totalRanked + 1,
+      updatedExistingUser: Boolean(existingUser),
+    })
+
     return null
   },
 })
@@ -243,6 +283,13 @@ export const saveAnalysisStatus = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    console.log('[shipmax]', 'save_analysis_status', {
+      message: args.message,
+      normalizedUsername: args.usernameLower,
+      status: args.status,
+      username: args.username,
+    })
+
     const existingStatus = await ctx.db
       .query('analysisStatuses')
       .withIndex('by_username_lower', (query) =>

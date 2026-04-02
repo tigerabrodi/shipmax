@@ -79,6 +79,10 @@ function ProfilePage() {
     try {
       await requestAnalysis({ username })
     } catch (error) {
+      console.error('[shipmax]', 'profile_retry_failed', {
+        error,
+        username,
+      })
       setRequestErrorMessage(toastConvexError(error))
     }
   }, [requestAnalysis, username])
@@ -144,10 +148,25 @@ function ProfilePage() {
     setRequestErrorMessage(null)
 
     void requestAnalysis({ username: profileState.username }).catch((error) => {
+      console.error('[shipmax]', 'profile_request_analysis_failed', {
+        error,
+        username: profileState.username,
+      })
       analysisRequestRef.current = null
       setRequestErrorMessage(toastConvexError(error))
     })
   }, [profileState, requestAnalysis])
+
+  useEffect(() => {
+    if (!profileState || profileState.status !== 'error') {
+      return
+    }
+
+    console.error('[shipmax]', 'profile_state_error', {
+      message: profileState.message,
+      username: profileState.username,
+    })
+  }, [profileState])
 
   useEffect(() => {
     if (!profileState || profileState.status !== 'ready') {

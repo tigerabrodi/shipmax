@@ -1,3 +1,5 @@
+'use node'
+
 import { internal } from '../_generated/api'
 import { internalAction } from '../_generated/server'
 import { v } from 'convex/values'
@@ -149,6 +151,26 @@ const WEEKDAY_NAMES = [
   'Friday',
   'Saturday',
 ] as const
+
+function logShipmaxInfo({
+  event,
+  details,
+}: {
+  event: string
+  details?: Record<string, unknown>
+}) {
+  console.log('[shipmax]', event, details ?? {})
+}
+
+function logShipmaxError({
+  event,
+  details,
+}: {
+  event: string
+  details?: Record<string, unknown>
+}) {
+  console.error('[shipmax]', event, details ?? {})
+}
 
 function clampScore({ score }: { score: number }): number {
   return Math.max(0, Math.min(100, Math.round(score)))
@@ -492,8 +514,17 @@ async function fetchGitHubUser({
   token: string
   username: string
 }): Promise<GitHubUser | null> {
+  let attempt = 0
+
   return pRetry(
     async () => {
+      attempt += 1
+
+      logShipmaxInfo({
+        event: 'github_fetch_start',
+        details: { attempt, username },
+      })
+
       const response = await fetch('https://api.github.com/graphql', {
         method: 'POST',
         headers: {
@@ -506,20 +537,55 @@ async function fetchGitHubUser({
         }),
       })
 
+      logShipmaxInfo({
+        event: 'github_fetch_response',
+        details: {
+          attempt,
+          ok: response.ok,
+          rateLimitRemaining: response.headers.get('x-ratelimit-remaining'),
+          rateLimitReset: response.headers.get('x-ratelimit-reset'),
+          status: response.status,
+          username,
+        },
+      })
+
       if (!response.ok) {
+        const responseText = await response.text()
+
+        logShipmaxError({
+          event: 'github_fetch_http_error',
+          details: {
+            attempt,
+            body: responseText.slice(0, 500),
+            status: response.status,
+            username,
+          },
+        })
+
         if (response.status >= 500) {
           throw new Error(
             `GitHub request failed with status ${response.status}.`
           )
         }
 
-        throw new AbortError(ANALYSIS_ERROR_MESSAGE)
+        throw new AbortError(
+          `GitHub HTTP ${response.status}. ${responseText.slice(0, 200)}`
+        )
       }
 
       const payload = (await response.json()) as GitHubResponse
 
       if (payload.errors?.length) {
         const firstError = payload.errors[0]
+
+        logShipmaxError({
+          event: 'github_graphql_error',
+          details: {
+            attempt,
+            errors: payload.errors,
+            username,
+          },
+        })
 
         if (
           firstError?.type === 'RATE_LIMITED' ||
@@ -531,9 +597,28 @@ async function fetchGitHubUser({
         throw new Error(firstError?.message ?? ANALYSIS_ERROR_MESSAGE)
       }
 
+      logShipmaxInfo({
+        event: 'github_fetch_complete',
+        details: {
+          attempt,
+          foundUser: payload.data?.user !== null,
+          username,
+        },
+      })
+
       return payload.data?.user ?? null
     },
     {
+      onFailedAttempt: (error) => {
+        logShipmaxError({
+          event: 'github_fetch_attempt_failed',
+          details: {
+            attempt: error.attemptNumber,
+            retriesLeft: error.retriesLeft,
+            username,
+          },
+        })
+      },
       retries: 2,
     }
   )
@@ -619,6 +704,10 @@ function getFailureMessage({ error }: { error: unknown }): string {
     return error.message
   }
 
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
   return ANALYSIS_ERROR_MESSAGE
 }
 
@@ -632,10 +721,26 @@ export const analyzeUser = internalAction({
       username: args.username,
     })
 
+    logShipmaxInfo({
+      event: 'analyze_user_start',
+      details: {
+        normalizedUsername,
+        requestedUsername: args.username,
+      },
+    })
+
     if (
       !normalizedUsername ||
       !isValidGitHubUsername({ username: normalizedUsername })
     ) {
+      logShipmaxError({
+        event: 'analyze_user_invalid_username',
+        details: {
+          normalizedUsername,
+          requestedUsername: args.username,
+        },
+      })
+
       await ctx.runMutation(internal.users.mutations.saveAnalysisStatus, {
         username: normalizedUsername || args.username,
         usernameLower: toUsernameLower({
@@ -650,7 +755,20 @@ export const analyzeUser = internalAction({
 
     const token = process.env.GITHUB_TOKEN
 
+    logShipmaxInfo({
+      event: 'analyze_user_token_check',
+      details: {
+        hasToken: Boolean(token),
+        normalizedUsername,
+      },
+    })
+
     if (!token) {
+      logShipmaxError({
+        event: 'analyze_user_missing_token',
+        details: { normalizedUsername },
+      })
+
       await ctx.runMutation(internal.users.mutations.saveAnalysisStatus, {
         username: normalizedUsername,
         usernameLower: toUsernameLower({ username: normalizedUsername }),
@@ -668,6 +786,11 @@ export const analyzeUser = internalAction({
       })
 
       if (!githubUser) {
+        logShipmaxInfo({
+          event: 'analyze_user_not_found',
+          details: { normalizedUsername },
+        })
+
         await ctx.runMutation(internal.users.mutations.saveAnalysisStatus, {
           username: normalizedUsername,
           usernameLower: toUsernameLower({ username: normalizedUsername }),
@@ -680,10 +803,35 @@ export const analyzeUser = internalAction({
 
       const result = buildAnalysisResult({ user: githubUser })
 
+      logShipmaxInfo({
+        event: 'analyze_user_computed_result',
+        details: {
+          normalizedUsername,
+          rank: result.rank,
+          score: result.score,
+          totalContributions: result.rawData.totalContributions,
+          totalStars: result.rawData.totalStars,
+        },
+      })
+
       await ctx.runMutation(internal.users.mutations.saveAnalysisResult, {
         result,
       })
+
+      logShipmaxInfo({
+        event: 'analyze_user_saved_result',
+        details: { normalizedUsername },
+      })
     } catch (error) {
+      logShipmaxError({
+        event: 'analyze_user_failed',
+        details: {
+          message: getFailureMessage({ error }),
+          normalizedUsername,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
       await ctx.runMutation(internal.users.mutations.saveAnalysisStatus, {
         username: normalizedUsername,
         usernameLower: toUsernameLower({ username: normalizedUsername }),
