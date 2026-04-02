@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas'
+import { toPng } from 'html-to-image'
 import { useMutation, useQuery } from 'convex/react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -114,16 +114,14 @@ function ProfilePage() {
     try {
       setIsDownloading(true)
 
-      const canvas = await html2canvas(profileCardRef.current, {
+      const dataUrl = await toPng(profileCardRef.current, {
         backgroundColor: '#040710',
-        logging: false,
-        scale: 2,
-        useCORS: true,
+        pixelRatio: 2,
       })
 
       const downloadLink = document.createElement('a')
       downloadLink.download = `${profileState.profile.username}-shipmax.png`
-      downloadLink.href = canvas.toDataURL('image/png')
+      downloadLink.href = dataUrl
       downloadLink.click()
       toast.success('Hunter card downloaded.')
     } catch {
@@ -147,14 +145,16 @@ function ProfilePage() {
     analysisRequestRef.current = requestKey
     setRequestErrorMessage(null)
 
-    void requestAnalysis({ username: profileState.username }).catch((error) => {
-      console.error('[shipmax]', 'profile_request_analysis_failed', {
-        error,
-        username: profileState.username,
-      })
-      analysisRequestRef.current = null
-      setRequestErrorMessage(toastConvexError(error))
-    })
+    void requestAnalysis({ username: profileState.username }).catch(
+      (error: unknown) => {
+        console.error('[shipmax]', 'profile_request_analysis_failed', {
+          error,
+          username: profileState.username,
+        })
+        analysisRequestRef.current = null
+        setRequestErrorMessage(toastConvexError(error))
+      }
+    )
   }, [profileState, requestAnalysis])
 
   useEffect(() => {
