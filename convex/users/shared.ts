@@ -68,10 +68,48 @@ const PROFILE_READY_VALIDATOR = v.object({
   lastScannedAt: v.number(),
 })
 
+const PROFILE_SHARE_READY_VALIDATOR = v.object({
+  username: v.string(),
+  avatarUrl: v.string(),
+  rank: rankValidator,
+  rankTitle: v.string(),
+  score: v.number(),
+  roast: v.string(),
+  stats: statsValidator,
+  position: v.number(),
+  totalRanked: v.number(),
+  lastScannedAt: v.number(),
+})
+
 const PROFILE_STATE_VALIDATOR = v.union(
   v.object({
     status: v.literal('ready'),
     profile: PROFILE_READY_VALIDATOR,
+  }),
+  v.object({
+    status: v.literal('pending'),
+    username: v.string(),
+  }),
+  v.object({
+    status: v.literal('should_analyze'),
+    username: v.string(),
+  }),
+  v.object({
+    status: v.literal('not_found'),
+    username: v.string(),
+    message: v.string(),
+  }),
+  v.object({
+    status: v.literal('error'),
+    username: v.string(),
+    message: v.string(),
+  })
+)
+
+const PROFILE_SHARE_STATE_VALIDATOR = v.union(
+  v.object({
+    status: v.literal('ready'),
+    profile: PROFILE_SHARE_READY_VALIDATOR,
   }),
   v.object({
     status: v.literal('pending'),
@@ -140,6 +178,8 @@ export {
   HOME_HUNTER_VALIDATOR,
   HOME_SUMMARY_VALIDATOR,
   PROFILE_READY_VALIDATOR,
+  PROFILE_SHARE_READY_VALIDATOR,
+  PROFILE_SHARE_STATE_VALIDATOR,
   PROFILE_STATE_VALIDATOR,
   RANK_ROASTS,
   RANK_TITLES,

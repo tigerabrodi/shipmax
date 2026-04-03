@@ -6,6 +6,7 @@
     "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,
+    "jsx": "react-jsx",
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -22,5 +23,11 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "api/**/*.ts",
+    "api/**/*.tsx",
+    "middleware.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
 }

@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as http from "../http.js";
 import type * as leaderboard_queries from "../leaderboard/queries.js";
 import type * as shared_errors from "../shared/errors.js";
 import type * as users_actions from "../users/actions.js";
@@ -22,6 +23,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  http: typeof http;
   "leaderboard/queries": typeof leaderboard_queries;
   "shared/errors": typeof shared_errors;
   "users/actions": typeof users_actions;
