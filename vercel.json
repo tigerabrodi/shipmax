@@ -2,7 +2,8 @@
   "bunVersion": "1.x",
   "installCommand": "bun install",
   "buildCommand": "npx convex deploy --cmd 'bun run build'",
-  "rewrites": [
-    { "source": "^/(?!api(?:/|$))(.*)$", "destination": "/index.html" }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
   ]
 }
