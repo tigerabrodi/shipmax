@@ -13,6 +13,7 @@ import type * as leaderboard_queries from "../leaderboard/queries.js";
 import type * as shared_errors from "../shared/errors.js";
 import type * as users_actions from "../users/actions.js";
 import type * as users_mutations from "../users/mutations.js";
+import type * as users_og_actions from "../users/og_actions.js";
 import type * as users_queries from "../users/queries.js";
 import type * as users_shared from "../users/shared.js";
 
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   "shared/errors": typeof shared_errors;
   "users/actions": typeof users_actions;
   "users/mutations": typeof users_mutations;
+  "users/og_actions": typeof users_og_actions;
   "users/queries": typeof users_queries;
   "users/shared": typeof users_shared;
 }>;

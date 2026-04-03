@@ -1,4 +1,4 @@
-import { api } from './_generated/api'
+import { api, internal } from './_generated/api'
 import { httpAction } from './_generated/server'
 import { httpRouter } from 'convex/server'
 
@@ -7,6 +7,10 @@ declare const process: {
 }
 
 const DEFAULT_SITE_ORIGIN = 'https://shipmax.dev'
+const IMAGE_CACHE_CONTROL_READY =
+  'public, max-age=86400, stale-while-revalidate=43200'
+const IMAGE_CACHE_CONTROL_STALE =
+  'public, max-age=300, stale-while-revalidate=300'
 
 const http = httpRouter()
 
@@ -83,13 +87,33 @@ function getSiteOrigin({
   )
 }
 
+function getRequestOrigin({
+  request,
+}: {
+  request: Request
+}): string {
+  return new URL(request.url).origin
+}
+
+function getImageCacheControl({
+  shareState,
+}: {
+  shareState: ShareState
+}): string {
+  return shareState.status === 'ready'
+    ? IMAGE_CACHE_CONTROL_READY
+    : IMAGE_CACHE_CONTROL_STALE
+}
+
 function buildMetaPayload({
   shareState,
   fallbackUsername,
+  imageOrigin,
   siteOrigin,
 }: {
   shareState: ShareState
   fallbackUsername: string
+  imageOrigin: string
   siteOrigin: string
 }) {
   if (shareState.status === 'ready') {
@@ -101,7 +125,7 @@ function buildMetaPayload({
         value: shareState.profile.roast,
         maxLength: 200,
       }),
-      imageUrl: `${siteOrigin}/api/og?username=${encodeURIComponent(username)}`,
+      imageUrl: `${imageOrigin}/og-image?username=${encodeURIComponent(username)}`,
       title: `${username} is ${shareState.profile.rank} RANK on ShipMax`,
       url: `${siteOrigin}/u/${encodeURIComponent(username)}`,
     }
@@ -113,7 +137,7 @@ function buildMetaPayload({
     return {
       cacheControl: 'public, max-age=300',
       description: `ShipMax is scanning @${username}. Check back soon for the final rank.`,
-      imageUrl: `${siteOrigin}/api/og?username=${encodeURIComponent(username)}`,
+      imageUrl: `${imageOrigin}/og-image?username=${encodeURIComponent(username)}`,
       title: `Scanning @${username} on ShipMax`,
       url: `${siteOrigin}/u/${encodeURIComponent(username)}`,
     }
@@ -123,7 +147,7 @@ function buildMetaPayload({
     return {
       cacheControl: 'public, max-age=300',
       description: shareState.message,
-      imageUrl: `${siteOrigin}/api/og?username=${encodeURIComponent(shareState.username)}`,
+      imageUrl: `${imageOrigin}/og-image?username=${encodeURIComponent(shareState.username)}`,
       title: `ShipMax could not scan @${shareState.username}`,
       url: `${siteOrigin}/u/${encodeURIComponent(shareState.username)}`,
     }
@@ -132,7 +156,7 @@ function buildMetaPayload({
   return {
     cacheControl: 'public, max-age=300',
     description: `Check whether @${shareState.username ?? fallbackUsername} has what it takes to rank on ShipMax.`,
-    imageUrl: `${siteOrigin}/api/og?username=${encodeURIComponent(shareState.username ?? fallbackUsername)}`,
+    imageUrl: `${imageOrigin}/og-image?username=${encodeURIComponent(shareState.username ?? fallbackUsername)}`,
     title: `Check @${shareState.username ?? fallbackUsername} on ShipMax`,
     url: `${siteOrigin}/u/${encodeURIComponent(shareState.username ?? fallbackUsername)}`,
   }
@@ -197,6 +221,7 @@ http.route({
     const metaPayload = buildMetaPayload({
       shareState,
       fallbackUsername: username,
+      imageOrigin: getRequestOrigin({ request }),
       siteOrigin: getSiteOrigin({ request }),
     })
 
@@ -205,6 +230,40 @@ http.route({
       headers: new Headers({
         'Cache-Control': metaPayload.cacheControl,
         'Content-Type': 'text/html; charset=utf-8',
+      }),
+    })
+  }),
+})
+
+http.route({
+  path: '/og-image',
+  method: 'GET',
+  handler: httpAction(async (ctx, request) => {
+    const url = new URL(request.url)
+    const username = url.searchParams.get('username')?.trim() ?? ''
+
+    if (!username) {
+      return new Response('Missing username.', {
+        status: 400,
+      })
+    }
+
+    const shareState = await ctx.runQuery(api.users.queries.getProfileShareState, {
+      username,
+    })
+    const imageBytes = await ctx.runAction(
+      internal.users.og_actions.renderProfileOgImage,
+      {
+        shareState,
+        username,
+      }
+    )
+
+    return new Response(imageBytes, {
+      status: 200,
+      headers: new Headers({
+        'Cache-Control': getImageCacheControl({ shareState }),
+        'Content-Type': 'image/png',
       }),
     })
   }),

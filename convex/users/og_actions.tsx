@@ -1,25 +1,35 @@
-import { ImageResponse } from '@vercel/og'
+'use node'
 
-const CACHE_CONTROL_HEADER =
-  'public, s-maxage=86400, stale-while-revalidate=43200'
+import { Resvg, initWasm } from '@resvg/resvg-wasm'
+import { type Infer, v } from 'convex/values'
+import pRetry from 'p-retry'
+import satori from 'satori'
+import { internalAction } from '../_generated/server'
+import { PROFILE_SHARE_STATE_VALIDATOR } from './shared'
 
-const DEFAULT_SITE_ORIGIN = 'https://shipmax.dev'
+const BODY_FONT_FAMILY = 'Chakra Petch'
+const DISPLAY_FONT_FAMILY = 'Cinzel Decorative'
+const IMAGE_HEIGHT = 630
+const IMAGE_WIDTH = 1200
+const BODY_FONT_URL =
+  'https://raw.githubusercontent.com/google/fonts/main/ofl/chakrapetch/ChakraPetch-Bold.ttf'
+const DISPLAY_FONT_URL =
+  'https://raw.githubusercontent.com/google/fonts/main/ofl/cinzeldecorative/CinzelDecorative-Bold.ttf'
+const RESVG_WASM_URL =
+  'https://cdn.jsdelivr.net/npm/@resvg/resvg-wasm@2.4.0/index_bg.wasm'
 
-let displayFontPromise = null
-let bodyFontPromise = null
+type ShareState = Infer<typeof PROFILE_SHARE_STATE_VALIDATOR>
+type ReadyShareState = Extract<ShareState, { status: 'ready' }>
 
-function getConvexSiteUrl() {
-  return process.env.CONVEX_SITE_URL ?? process.env.VITE_CONVEX_SITE_URL ?? null
-}
+let bodyFontPromise: Promise<ArrayBuffer> | null = null
+let displayFontPromise: Promise<ArrayBuffer> | null = null
+let resvgReadyPromise: Promise<void> | null = null
 
-function getSiteOrigin({ request }) {
-  return request.headers.get('x-forwarded-proto') &&
-    request.headers.get('x-forwarded-host')
-    ? `${request.headers.get('x-forwarded-proto')}://${request.headers.get('x-forwarded-host')}`
-    : new URL(request.url).origin || DEFAULT_SITE_ORIGIN
-}
-
-function getRankColor({ rank }) {
+function getRankColor({
+  rank,
+}: {
+  rank: ReadyShareState['profile']['rank']
+}): string {
   switch (rank) {
     case 'S':
       return '#FBBF24'
@@ -38,7 +48,13 @@ function getRankColor({ rank }) {
   }
 }
 
-function truncateText({ value, maxLength }) {
+function truncateText({
+  value,
+  maxLength,
+}: {
+  value: string
+  maxLength: number
+}): string {
   if (value.length <= maxLength) {
     return value
   }
@@ -46,7 +62,7 @@ function truncateText({ value, maxLength }) {
   return `${value.slice(0, maxLength - 3).trimEnd()}...`
 }
 
-function formatLastScanned({ timestamp }) {
+function formatLastScanned({ timestamp }: { timestamp: number }): string {
   const elapsedMs = Date.now() - timestamp
 
   if (elapsedMs < 60_000) {
@@ -64,15 +80,13 @@ function formatLastScanned({ timestamp }) {
   return `Last scanned ${Math.floor(elapsedMs / 86_400_000)}d ago`
 }
 
-function getFallbackCopy({ shareState, username }) {
-  if (!shareState) {
-    return {
-      eyebrow: 'SHIPMAX',
-      subtitle: 'Dynamic OG preview is waiting on Convex.',
-      title: 'How Hard Do You Ship.',
-    }
-  }
-
+function getFallbackCopy({
+  shareState,
+  username,
+}: {
+  shareState: ShareState
+  username: string
+}) {
   if (shareState.status === 'ready') {
     return {
       eyebrow: 'RANKED HUNTER',
@@ -107,90 +121,112 @@ function getFallbackCopy({ shareState, username }) {
   }
 }
 
-function buildOgDataUrl({ convexSiteUrl, username }) {
-  const ogDataUrl = new URL('/og-data', convexSiteUrl)
-  ogDataUrl.searchParams.set('username', username)
-  return ogDataUrl.toString()
-}
+async function loadGoogleFont({
+  family,
+  url,
+}: {
+  family: string
+  url: string
+}): Promise<ArrayBuffer> {
+  return pRetry(
+    async () => {
+      const fontResponse = await fetch(url)
 
-async function loadGoogleFont({ family, weight }) {
-  const cssUrl =
-    `https://fonts.googleapis.com/css2?family=${family.replaceAll(' ', '+')}` +
-    `:wght@${weight}`
-  const cssResponse = await fetch(cssUrl, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      if (!fontResponse.ok) {
+        throw new Error(`Failed to download font file for ${family}.`)
+      }
+
+      return fontResponse.arrayBuffer()
     },
-  })
-
-  if (!cssResponse.ok) {
-    throw new Error(`Failed to fetch font CSS for ${family}.`)
-  }
-
-  const css = await cssResponse.text()
-  const fontUrlMatch = css.match(/url\((https:[^)]+)\)/)
-
-  if (!fontUrlMatch) {
-    throw new Error(`Font URL missing for ${family}.`)
-  }
-
-  const fontResponse = await fetch(fontUrlMatch[1])
-
-  if (!fontResponse.ok) {
-    throw new Error(`Failed to download font file for ${family}.`)
-  }
-
-  return fontResponse.arrayBuffer()
+    {
+      retries: 3,
+    }
+  )
 }
 
-function getDisplayFontPromise() {
+function getDisplayFontPromise(): Promise<ArrayBuffer> {
   if (!displayFontPromise) {
     displayFontPromise = loadGoogleFont({
-      family: 'Cinzel Decorative',
-      weight: 700,
+      family: DISPLAY_FONT_FAMILY,
+      url: DISPLAY_FONT_URL,
+    }).catch((error: unknown) => {
+      displayFontPromise = null
+      throw error
     })
   }
 
   return displayFontPromise
 }
 
-function getBodyFontPromise() {
+function getBodyFontPromise(): Promise<ArrayBuffer> {
   if (!bodyFontPromise) {
     bodyFontPromise = loadGoogleFont({
-      family: 'Chakra Petch',
-      weight: 700,
+      family: BODY_FONT_FAMILY,
+      url: BODY_FONT_URL,
+    }).catch((error: unknown) => {
+      bodyFontPromise = null
+      throw error
     })
   }
 
   return bodyFontPromise
 }
 
-async function fetchShareState({ request, username }) {
-  const convexSiteUrl = getConvexSiteUrl()
+function getResvgReadyPromise(): Promise<void> {
+  if (!resvgReadyPromise) {
+    resvgReadyPromise = pRetry(
+      async () => {
+        const response = await fetch(RESVG_WASM_URL)
 
-  if (!convexSiteUrl) {
-    return null
-  }
+        if (!response.ok) {
+          throw new Error('Failed to download the Resvg WASM binary.')
+        }
 
-  try {
-    const response = await fetch(buildOgDataUrl({ convexSiteUrl, username }), {
-      headers: new Headers({
-        'x-og-origin': getSiteOrigin({ request }),
-      }),
+        await initWasm(response)
+      },
+      {
+        retries: 3,
+      }
+    ).catch((error: unknown) => {
+      resvgReadyPromise = null
+      throw error
     })
-
-    if (!response.ok) {
-      return null
-    }
-
-    return await response.json()
-  } catch {
-    return null
   }
+
+  return resvgReadyPromise
 }
 
-function renderFallbackCard({ shareState, username }) {
+async function getFonts() {
+  const [displayFontResult, bodyFontResult] = await Promise.allSettled([
+    getDisplayFontPromise(),
+    getBodyFontPromise(),
+  ])
+
+  return [
+    displayFontResult.status === 'fulfilled'
+      ? {
+          data: displayFontResult.value,
+          name: DISPLAY_FONT_FAMILY,
+          weight: 700 as const,
+        }
+      : null,
+    bodyFontResult.status === 'fulfilled'
+      ? {
+          data: bodyFontResult.value,
+          name: BODY_FONT_FAMILY,
+          weight: 700 as const,
+        }
+      : null,
+  ].filter((font) => font !== null)
+}
+
+function renderFallbackCard({
+  shareState,
+  username,
+}: {
+  shareState: ShareState
+  username: string
+}) {
   const copy = getFallbackCopy({ shareState, username })
 
   return (
@@ -202,7 +238,7 @@ function renderFallbackCard({ shareState, username }) {
         color: '#E2E8F0',
         display: 'flex',
         flex: 1,
-        fontFamily: '"Chakra Petch"',
+        fontFamily: `"${BODY_FONT_FAMILY}"`,
         height: '100%',
         padding: '44px',
         position: 'relative',
@@ -257,7 +293,7 @@ function renderFallbackCard({ shareState, username }) {
           style={{
             color: '#F8FAFC',
             display: 'flex',
-            fontFamily: '"Cinzel Decorative"',
+            fontFamily: `"${DISPLAY_FONT_FAMILY}"`,
             fontSize: 72,
             lineHeight: 1.05,
           }}
@@ -292,7 +328,7 @@ function renderFallbackCard({ shareState, username }) {
   )
 }
 
-function renderReadyCard({ profile }) {
+function renderReadyCard({ profile }: { profile: ReadyShareState['profile'] }) {
   const rankColor = getRankColor({ rank: profile.rank })
   const statItems = [
     { label: 'CONSISTENCY', value: profile.stats.consistency },
@@ -311,7 +347,7 @@ function renderReadyCard({ profile }) {
         color: '#E2E8F0',
         display: 'flex',
         flex: 1,
-        fontFamily: '"Chakra Petch"',
+        fontFamily: `"${BODY_FONT_FAMILY}"`,
         height: '100%',
         padding: '40px',
         position: 'relative',
@@ -388,7 +424,7 @@ function renderReadyCard({ profile }) {
                 style={{
                   color: '#F8FAFC',
                   display: 'flex',
-                  fontFamily: '"Cinzel Decorative"',
+                  fontFamily: `"${DISPLAY_FONT_FAMILY}"`,
                   fontSize: 46,
                   lineHeight: 1,
                   maxWidth: 560,
@@ -421,7 +457,7 @@ function renderReadyCard({ profile }) {
             style={{
               color: rankColor,
               display: 'flex',
-              fontFamily: '"Cinzel Decorative"',
+              fontFamily: `"${DISPLAY_FONT_FAMILY}"`,
               fontSize: 190,
               lineHeight: 0.9,
               textShadow: `0 0 32px ${rankColor}55`,
@@ -565,39 +601,53 @@ function renderReadyCard({ profile }) {
   )
 }
 
-export default async function handler(request) {
-  const url = new URL(request.url)
-  const username = url.searchParams.get('username')?.trim() ?? ''
-  const shareState = username
-    ? await fetchShareState({ request, username })
-    : null
-  const [displayFont, bodyFont] = await Promise.all([
-    getDisplayFontPromise(),
-    getBodyFontPromise(),
-  ])
-
-  return new ImageResponse(
-    shareState?.status === 'ready'
+async function renderImageBuffer({
+  shareState,
+  username,
+}: {
+  shareState: ShareState
+  username: string
+}): Promise<ArrayBuffer> {
+  const [fonts] = await Promise.all([getFonts(), getResvgReadyPromise()])
+  const svg = await satori(
+    shareState.status === 'ready'
       ? renderReadyCard({ profile: shareState.profile })
       : renderFallbackCard({ shareState, username }),
     {
-      fonts: [
-        {
-          data: displayFont,
-          name: 'Cinzel Decorative',
-          weight: 700,
-        },
-        {
-          data: bodyFont,
-          name: 'Chakra Petch',
-          weight: 700,
-        },
-      ],
-      headers: {
-        'Cache-Control': CACHE_CONTROL_HEADER,
-      },
-      height: 630,
-      width: 1200,
+      fonts,
+      height: IMAGE_HEIGHT,
+      width: IMAGE_WIDTH,
     }
   )
+  const pngBytes = new Resvg(svg).render().asPng()
+  const imageBuffer = new ArrayBuffer(pngBytes.byteLength)
+
+  new Uint8Array(imageBuffer).set(pngBytes)
+
+  return imageBuffer
 }
+
+export const renderProfileOgImage = internalAction({
+  args: {
+    shareState: PROFILE_SHARE_STATE_VALIDATOR,
+    username: v.string(),
+  },
+  returns: v.bytes(),
+  handler: async (_ctx, args) => {
+    try {
+      return await renderImageBuffer({
+        shareState: args.shareState,
+        username: args.username,
+      })
+    } catch {
+      return renderImageBuffer({
+        shareState: {
+          status: 'error',
+          message: 'Dynamic preview is temporarily unavailable.',
+          username: args.username,
+        },
+        username: args.username,
+      })
+    }
+  },
+})
