@@ -1,71 +1,25 @@
 import { ImageResponse } from '@vercel/og'
 
-declare const process: {
-  env: Record<string, string | undefined>
-}
-
 const CACHE_CONTROL_HEADER =
   'public, s-maxage=86400, stale-while-revalidate=43200'
 
 const DEFAULT_SITE_ORIGIN = 'https://shipmax.dev'
 
-type ShareStats = {
-  consistency: number
-  recentActivity: number
-  volume: number
-  stars: number
-  community: number
-}
+let displayFontPromise = null
+let bodyFontPromise = null
 
-type ShareState =
-  | {
-      status: 'ready'
-      profile: {
-        username: string
-        avatarUrl: string
-        rank: 'S' | 'A' | 'B' | 'C' | 'D' | 'E'
-        rankTitle: string
-        score: number
-        roast: string
-        stats: ShareStats
-        position: number
-        totalRanked: number
-        lastScannedAt: number
-      }
-    }
-  | {
-      status: 'pending' | 'should_analyze'
-      username: string
-    }
-  | {
-      status: 'not_found' | 'error'
-      username: string
-      message: string
-    }
-
-export const config = {
-  runtime: 'edge',
-}
-
-let displayFontPromise: Promise<ArrayBuffer> | null = null
-let bodyFontPromise: Promise<ArrayBuffer> | null = null
-
-function getConvexSiteUrl(): string | null {
+function getConvexSiteUrl() {
   return process.env.CONVEX_SITE_URL ?? process.env.VITE_CONVEX_SITE_URL ?? null
 }
 
-function getSiteOrigin({ request }: { request: Request }): string {
+function getSiteOrigin({ request }) {
   return request.headers.get('x-forwarded-proto') &&
     request.headers.get('x-forwarded-host')
     ? `${request.headers.get('x-forwarded-proto')}://${request.headers.get('x-forwarded-host')}`
     : new URL(request.url).origin || DEFAULT_SITE_ORIGIN
 }
 
-function getRankColor({
-  rank,
-}: {
-  rank: 'S' | 'A' | 'B' | 'C' | 'D' | 'E'
-}): string {
+function getRankColor({ rank }) {
   switch (rank) {
     case 'S':
       return '#FBBF24'
@@ -79,16 +33,12 @@ function getRankColor({
       return '#6B7280'
     case 'E':
       return '#EF4444'
+    default:
+      return '#3B82F6'
   }
 }
 
-function truncateText({
-  value,
-  maxLength,
-}: {
-  value: string
-  maxLength: number
-}): string {
+function truncateText({ value, maxLength }) {
   if (value.length <= maxLength) {
     return value
   }
@@ -96,7 +46,7 @@ function truncateText({
   return `${value.slice(0, maxLength - 3).trimEnd()}...`
 }
 
-function formatLastScanned({ timestamp }: { timestamp: number }): string {
+function formatLastScanned({ timestamp }) {
   const elapsedMs = Date.now() - timestamp
 
   if (elapsedMs < 60_000) {
@@ -114,13 +64,7 @@ function formatLastScanned({ timestamp }: { timestamp: number }): string {
   return `Last scanned ${Math.floor(elapsedMs / 86_400_000)}d ago`
 }
 
-function getFallbackCopy({
-  shareState,
-  username,
-}: {
-  shareState: ShareState | null
-  username: string
-}) {
+function getFallbackCopy({ shareState, username }) {
   if (!shareState) {
     return {
       eyebrow: 'SHIPMAX',
@@ -163,25 +107,13 @@ function getFallbackCopy({
   }
 }
 
-function buildOgDataUrl({
-  convexSiteUrl,
-  username,
-}: {
-  convexSiteUrl: string
-  username: string
-}): string {
+function buildOgDataUrl({ convexSiteUrl, username }) {
   const ogDataUrl = new URL('/og-data', convexSiteUrl)
   ogDataUrl.searchParams.set('username', username)
   return ogDataUrl.toString()
 }
 
-async function loadGoogleFont({
-  family,
-  weight,
-}: {
-  family: string
-  weight: number
-}) {
+async function loadGoogleFont({ family, weight }) {
   const cssUrl =
     `https://fonts.googleapis.com/css2?family=${family.replaceAll(' ', '+')}` +
     `:wght@${weight}`
@@ -234,13 +166,7 @@ function getBodyFontPromise() {
   return bodyFontPromise
 }
 
-async function fetchShareState({
-  request,
-  username,
-}: {
-  request: Request
-  username: string
-}): Promise<ShareState | null> {
+async function fetchShareState({ request, username }) {
   const convexSiteUrl = getConvexSiteUrl()
 
   if (!convexSiteUrl) {
@@ -258,19 +184,13 @@ async function fetchShareState({
       return null
     }
 
-    return (await response.json()) as ShareState
+    return await response.json()
   } catch {
     return null
   }
 }
 
-function renderFallbackCard({
-  shareState,
-  username,
-}: {
-  shareState: ShareState | null
-  username: string
-}) {
+function renderFallbackCard({ shareState, username }) {
   const copy = getFallbackCopy({ shareState, username })
 
   return (
@@ -372,11 +292,7 @@ function renderFallbackCard({
   )
 }
 
-function renderReadyCard({
-  profile,
-}: {
-  profile: Extract<ShareState, { status: 'ready' }>['profile']
-}) {
+function renderReadyCard({ profile }) {
   const rankColor = getRankColor({ rank: profile.rank })
   const statItems = [
     { label: 'CONSISTENCY', value: profile.stats.consistency },
@@ -649,7 +565,7 @@ function renderReadyCard({
   )
 }
 
-export default async function handler(request: Request) {
+export default async function handler(request) {
   const url = new URL(request.url)
   const username = url.searchParams.get('username')?.trim() ?? ''
   const shareState = username
