@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { cn } from '@/utils/cn'
 import { type Rank } from './leaderboard-card'
 
@@ -76,10 +77,13 @@ function LeaderboardTableRow({
   const rgb = RANK_RGB[entry.rank]
 
   return (
-    <div
+    <Link
+      to="/u/$username"
+      params={{ username: entry.username }}
       className={cn(
         'flex items-center',
         'gap-2.5 px-3 py-3 md:gap-0 md:px-5 md:py-3.5',
+        'transition-colors hover:bg-[rgba(59,130,246,0.05)]',
         !isLast && 'border-b border-[rgba(59,130,246,0.06)]'
       )}
       style={isFirst ? { backgroundColor: `rgba(${rgb}, 0.03)` } : undefined}
@@ -126,7 +130,7 @@ function LeaderboardTableRow({
       >
         {entry.score}
       </span>
-    </div>
+    </Link>
   )
 }
 
