@@ -1,5 +1,6 @@
 import { ConvexProvider, ConvexReactClient } from 'convex/react'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { Analytics } from '@vercel/analytics/react'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import './app.css'
@@ -19,6 +20,7 @@ ReactDOM.createRoot(root).render(
   <StrictMode>
     <ConvexProvider client={convex}>
       <RouterProvider router={router} />
+      <Analytics />
     </ConvexProvider>
   </StrictMode>
 )

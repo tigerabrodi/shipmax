@@ -43,15 +43,12 @@ type ShareState =
       message: string
     }
 
-const DISPLAY_FONT_PROMISE = loadGoogleFont({
-  family: 'Cinzel Decorative',
-  weight: 700,
-})
+export const config = {
+  runtime: 'edge',
+}
 
-const BODY_FONT_PROMISE = loadGoogleFont({
-  family: 'Chakra Petch',
-  weight: 700,
-})
+let displayFontPromise: Promise<ArrayBuffer> | null = null
+let bodyFontPromise: Promise<ArrayBuffer> | null = null
 
 function getConvexSiteUrl(): string | null {
   return process.env.CONVEX_SITE_URL ?? process.env.VITE_CONVEX_SITE_URL ?? null
@@ -213,6 +210,28 @@ async function loadGoogleFont({
   }
 
   return fontResponse.arrayBuffer()
+}
+
+function getDisplayFontPromise() {
+  if (!displayFontPromise) {
+    displayFontPromise = loadGoogleFont({
+      family: 'Cinzel Decorative',
+      weight: 700,
+    })
+  }
+
+  return displayFontPromise
+}
+
+function getBodyFontPromise() {
+  if (!bodyFontPromise) {
+    bodyFontPromise = loadGoogleFont({
+      family: 'Chakra Petch',
+      weight: 700,
+    })
+  }
+
+  return bodyFontPromise
 }
 
 async function fetchShareState({
@@ -637,8 +656,8 @@ export default async function handler(request: Request) {
     ? await fetchShareState({ request, username })
     : null
   const [displayFont, bodyFont] = await Promise.all([
-    DISPLAY_FONT_PROMISE,
-    BODY_FONT_PROMISE,
+    getDisplayFontPromise(),
+    getBodyFontPromise(),
   ])
 
   return new ImageResponse(
