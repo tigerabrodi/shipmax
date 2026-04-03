@@ -1,4 +1,3 @@
-import { toPng } from 'html-to-image'
 import { useMutation, useQuery } from 'convex/react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -16,6 +15,23 @@ import { GitHubChart } from '@/components/github-chart'
 export const Route = createFileRoute('/u/$username')({
   component: ProfilePage,
 })
+
+function buildProfileOgImageUrl({
+  username,
+}: {
+  username: string
+}): string | null {
+  const convexSiteUrl = import.meta.env.VITE_CONVEX_SITE_URL as unknown
+
+  if (typeof convexSiteUrl !== 'string' || !convexSiteUrl) {
+    return null
+  }
+
+  const imageUrl = new URL('/og-image', convexSiteUrl)
+  imageUrl.searchParams.set('username', username)
+
+  return imageUrl.toString()
+}
 
 function formatLastScanned({
   timestamp,
@@ -66,7 +82,6 @@ function ProfilePage() {
   })
   const requestAnalysis = useMutation(api.users.mutations.requestAnalysis)
   const analysisRequestRef = useRef<string | null>(null)
-  const profileCardRef = useRef<HTMLDivElement | null>(null)
   const [requestErrorMessage, setRequestErrorMessage] = useState<string | null>(
     null
   )
@@ -103,26 +118,37 @@ function ProfilePage() {
   }, [profileState])
 
   const handleDownload = useCallback(async () => {
-    if (
-      !profileState ||
-      profileState.status !== 'ready' ||
-      !profileCardRef.current
-    ) {
+    if (!profileState || profileState.status !== 'ready') {
       return
     }
 
     try {
       setIsDownloading(true)
 
-      const dataUrl = await toPng(profileCardRef.current, {
-        backgroundColor: '#040710',
-        pixelRatio: 2,
+      const imageUrl = buildProfileOgImageUrl({
+        username: profileState.profile.username,
       })
+
+      if (!imageUrl) {
+        throw new Error('Missing Convex site URL for OG image download.')
+      }
+
+      const imageResponse = await fetch(imageUrl)
+
+      if (!imageResponse.ok) {
+        throw new Error('Failed to fetch the OG image.')
+      }
+
+      const imageBlob = await imageResponse.blob()
+      const objectUrl = URL.createObjectURL(imageBlob)
 
       const downloadLink = document.createElement('a')
       downloadLink.download = `${profileState.profile.username}-shipmax.png`
-      downloadLink.href = dataUrl
+      downloadLink.href = objectUrl
       downloadLink.click()
+      window.setTimeout(() => {
+        URL.revokeObjectURL(objectUrl)
+      }, 0)
       toast.success('Hunter card downloaded.')
     } catch {
       toast.error('Download failed. Try again.')
@@ -238,7 +264,7 @@ function ProfilePage() {
     <div className="bg-bg relative flex min-h-svh flex-col items-center overflow-hidden pb-12 md:pb-6">
       <div className="pointer-events-none absolute inset-4 hidden border border-[#3B82F61F] md:block" />
 
-      <div ref={profileCardRef} className="flex w-full flex-col items-center pb-2">
+      <div className="flex w-full flex-col items-center pb-2">
         <ProfileHero
           avatarUrl={profile.avatarUrl}
           username={profile.username}
