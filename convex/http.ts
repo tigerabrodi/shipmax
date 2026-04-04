@@ -245,6 +245,9 @@ http.route({
     if (!username) {
       return new Response('Missing username.', {
         status: 400,
+        headers: new Headers({
+          'Access-Control-Allow-Origin': '*',
+        }),
       })
     }
 
@@ -262,6 +265,7 @@ http.route({
     return new Response(imageBytes, {
       status: 200,
       headers: new Headers({
+        'Access-Control-Allow-Origin': '*',
         'Cache-Control': getImageCacheControl({ shareState }),
         'Content-Type': 'image/png',
       }),
