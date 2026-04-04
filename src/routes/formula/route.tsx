@@ -9,8 +9,16 @@ export const Route = createFileRoute('/formula')({
 
 const FACTORS = [
   {
-    title: 'Consistency',
+    title: 'Volume',
     percentage: '30%',
+    description:
+      "Total contributions in the last year. 4,500+ maxes this out. That's roughly 12 per day.",
+    mobileDescription: 'Total contributions in the year. 4,500+ maxes it out.',
+    scoreRef: 'score = min(100, contributions / 4500 × 100)',
+  },
+  {
+    title: 'Consistency',
+    percentage: '25%',
     description:
       'How many weeks out of 52 had at least 1 contribution. Rewards showing up regularly over binge-and-ghost patterns.',
     mobileDescription: 'How many weeks out of 52 had at least 1 contribution.',
@@ -19,21 +27,13 @@ const FACTORS = [
   },
   {
     title: 'Recent Activity',
-    percentage: '25%',
+    percentage: '20%',
     description:
       'Last 30 days vs your monthly average. Are you ramping up, steady, or falling off?',
     mobileDescription:
       'Last 30 days vs your monthly average. Ramping up or falling off?',
     scoreRef: 'ratio > 1.5 = 80-100 · 1.0-1.5 = 60-79 · 0.5-1.0 = 30-59',
     mobileScoreRef: 'ratio > 1.5 = 80-100 · 1.0-1.5 = 60-79',
-  },
-  {
-    title: 'Volume',
-    percentage: '20%',
-    description:
-      "Total contributions in the last year. 1,500+ maxes this out. That's roughly 4 per day.",
-    mobileDescription: 'Total contributions in the year. 1,500+ maxes it out.',
-    scoreRef: 'score = min(100, contributions / 1500 × 100)',
   },
   {
     title: 'Stars',
@@ -146,11 +146,11 @@ function FormulaPage() {
       <div className="mt-5 w-full px-4 md:mt-8 md:w-[800px] md:px-0">
         <div className="border border-[#3B82F626] bg-[#3B82F608] px-4 py-3.5 md:px-8 md:py-5">
           <p className="text-center text-[10px] leading-[160%] font-medium text-[#DBEAFE73] md:hidden">
-            Final = Consistency(30%) + Activity(25%) + Volume(20%) + Stars(15%)
+            Final = Volume(30%) + Consistency(25%) + Activity(20%) + Stars(15%)
             + Community(10%)
           </p>
           <p className="hidden text-center text-[13px] leading-[16px] font-medium tracking-[1px] text-[#DBEAFE80] md:block">
-            Final Score = (Consistency × 0.30) + (Activity × 0.25) + (Volume ×
+            Final Score = (Volume × 0.30) + (Consistency × 0.25) + (Activity ×
             0.20) + (Stars × 0.15) + (Community × 0.10)
           </p>
         </div>

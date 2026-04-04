@@ -285,7 +285,7 @@ function calculateVolumeScore({
   totalContributions: number
 }): number {
   return clampScore({
-    score: (totalContributions / 1500) * 100,
+    score: (totalContributions / 4500) * 100,
   })
 }
 
@@ -328,9 +328,9 @@ function calculateFinalScore({
 }): number {
   return clampScore({
     score:
-      consistency * 0.3 +
-      recentActivity * 0.25 +
-      volume * 0.2 +
+      volume * 0.3 +
+      consistency * 0.25 +
+      recentActivity * 0.2 +
       stars * 0.15 +
       community * 0.1,
   })
