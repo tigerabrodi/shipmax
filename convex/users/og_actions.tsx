@@ -601,7 +601,7 @@ function renderReadyCard({ profile }: { profile: ReadyShareState['profile'] }) {
   )
 }
 
-async function renderImageBuffer({
+export async function renderImageBuffer({
   shareState,
   username,
 }: {

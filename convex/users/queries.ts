@@ -1,4 +1,4 @@
-import { query, type QueryCtx } from '../_generated/server'
+import { internalQuery, query, type QueryCtx } from '../_generated/server'
 import { v } from 'convex/values'
 import { type Doc } from '../_generated/dataModel'
 import {
@@ -276,5 +276,38 @@ export const getProfileShareState = query({
       status: 'should_analyze' as const,
       username: normalizedUsername,
     }
+  },
+})
+
+export const getOgImageUrl = internalQuery({
+  args: {
+    username: v.string(),
+  },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const normalizedUsername = normalizeGitHubUsername({
+      username: args.username,
+    })
+
+    if (
+      !normalizedUsername ||
+      !isValidGitHubUsername({ username: normalizedUsername })
+    ) {
+      return null
+    }
+
+    const usernameLower = toUsernameLower({ username: normalizedUsername })
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_username_lower', (query) =>
+        query.eq('usernameLower', usernameLower)
+      )
+      .unique()
+
+    if (!user?.ogImageStorageId) {
+      return null
+    }
+
+    return await ctx.storage.getUrl(user.ogImageStorageId)
   },
 })

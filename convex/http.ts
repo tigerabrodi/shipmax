@@ -251,6 +251,26 @@ http.route({
       })
     }
 
+    const storedImageUrl: string | null = await ctx.runQuery(
+      internal.users.queries.getOgImageUrl,
+      { username }
+    )
+
+    if (storedImageUrl) {
+      const storedResponse = await fetch(storedImageUrl)
+
+      if (storedResponse.ok) {
+        return new Response(await storedResponse.arrayBuffer(), {
+          status: 200,
+          headers: new Headers({
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': IMAGE_CACHE_CONTROL_READY,
+            'Content-Type': 'image/png',
+          }),
+        })
+      }
+    }
+
     const shareState = await ctx.runQuery(api.users.queries.getProfileShareState, {
       username,
     })

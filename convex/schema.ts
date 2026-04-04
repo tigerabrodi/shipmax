@@ -68,6 +68,7 @@ export default defineSchema({
     stats: statsValidator,
     rawData: rawDataValidator,
     analyzedAt: v.number(),
+    ogImageStorageId: v.optional(v.id('_storage')),
   })
     .index('by_username', ['username'])
     .index('by_username_lower', ['usernameLower'])

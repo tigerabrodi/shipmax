@@ -1,9 +1,10 @@
 'use node'
 
-import { internal } from '../_generated/api'
+import { api, internal } from '../_generated/api'
 import { internalAction } from '../_generated/server'
 import { v } from 'convex/values'
 import pRetry, { AbortError } from 'p-retry'
+import { renderImageBuffer } from './og_actions'
 import {
   RANK_ROASTS,
   RANK_TITLES,
@@ -822,6 +823,11 @@ export const analyzeUser = internalAction({
         event: 'analyze_user_saved_result',
         details: { normalizedUsername },
       })
+
+      await ctx.scheduler.runAfter(0, internal.users.actions.generateOgImage, {
+        username: result.username,
+        usernameLower: result.usernameLower,
+      })
     } catch (error) {
       logShipmaxError({
         event: 'analyze_user_failed',
@@ -837,6 +843,51 @@ export const analyzeUser = internalAction({
         usernameLower: toUsernameLower({ username: normalizedUsername }),
         status: 'error',
         message: getFailureMessage({ error }),
+      })
+    }
+
+    return null
+  },
+})
+
+export const generateOgImage = internalAction({
+  args: {
+    username: v.string(),
+    usernameLower: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      const shareState = await ctx.runQuery(
+        api.users.queries.getProfileShareState,
+        { username: args.username }
+      )
+
+      const imageBuffer = await renderImageBuffer({
+        shareState,
+        username: args.username,
+      })
+
+      const storageId = await ctx.storage.store(
+        new Blob([imageBuffer], { type: 'image/png' })
+      )
+
+      await ctx.runMutation(internal.users.mutations.saveOgImageStorageId, {
+        usernameLower: args.usernameLower,
+        storageId,
+      })
+
+      logShipmaxInfo({
+        event: 'og_image_generated',
+        details: { username: args.username },
+      })
+    } catch (error) {
+      logShipmaxError({
+        event: 'og_image_generation_failed',
+        details: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          username: args.username,
+        },
       })
     }
 

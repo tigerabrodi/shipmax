@@ -274,6 +274,36 @@ export const saveAnalysisResult = internalMutation({
   },
 })
 
+export const saveOgImageStorageId = internalMutation({
+  args: {
+    usernameLower: v.string(),
+    storageId: v.id('_storage'),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existingUser = await ctx.db
+      .query('users')
+      .withIndex('by_username_lower', (query) =>
+        query.eq('usernameLower', args.usernameLower)
+      )
+      .unique()
+
+    if (!existingUser) {
+      return null
+    }
+
+    if (existingUser.ogImageStorageId) {
+      await ctx.storage.delete(existingUser.ogImageStorageId)
+    }
+
+    await ctx.db.patch(existingUser._id, {
+      ogImageStorageId: args.storageId,
+    })
+
+    return null
+  },
+})
+
 export const saveAnalysisStatus = internalMutation({
   args: {
     username: v.string(),
